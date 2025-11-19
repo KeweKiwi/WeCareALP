@@ -1,218 +1,299 @@
-import Combine
 import Foundation
 import SwiftUI
-// MARK: - Game 2048 Models (Tetap)
-struct Tile: Equatable {
-    var value: Int
-    var id: UUID = UUID()
-}
-struct Cell: Identifiable, Equatable {
-    let id: UUID = UUID()
-    var tile: Tile?
-}
-struct GridRow: Identifiable, Equatable {
-    let id: UUID = UUID()
-    var cells: [Cell]
-}
+import Combine
 enum Direction {
     case up, down, left, right
 }
-// MARK: - Game 2048 ViewModel
-class ReceiverGame2048VM: ObservableObject {
-    @Published var grid: [GridRow] = []
+final class ReceiverGame2048VM: ObservableObject {
+    @Published private(set) var tiles: [TileModel] = []
     @Published var score: Int = 0
     @Published var isGameOver: Bool = false
     @Published var gameStatus: String = "Swipe to play!"
     
-    private let size = 4
+    let size = 4
     
     init() {
         startNewGame()
     }
     
-    // MARK: - Game Setup
-    
     func startNewGame() {
-        grid = []
-        for _ in 0..<size {
-            var newRowCells: [Cell] = []
-            for _ in 0..<size {
-                newRowCells.append(Cell(tile: nil))
-            }
-            grid.append(GridRow(cells: newRowCells))
-        }
-        
+        tiles.removeAll()
         score = 0
         isGameOver = false
         gameStatus = "Swipe to play!"
-        
-        spawnNewTile()
-        spawnNewTile()
+        // spawn synchronously initial tiles so board state is immediate
+        spawnNewTileImmediate()
+        spawnNewTileImmediate()
     }
     
-    // Fungsi ini sudah benar (sesuai permintaan Anda sebelumnya untuk selalu '2')
-    func spawnNewTile() {
-        var emptyCells: [(r: Int, c: Int)] = []
+    // Synchronous spawn (no DispatchQueue) — useful when we need immediate board update
+    private func spawnNewTileImmediate() {
+        var empty: [(Int, Int)] = []
         for r in 0..<size {
             for c in 0..<size {
-                if grid[r].cells[c].tile == nil {
-                    emptyCells.append((r, c))
+                if tile(atRow: r, col: c) == nil {
+                    empty.append((r, c))
                 }
             }
         }
-        
-        if let randomCell = emptyCells.randomElement() {
-            let newValue = 2
-            grid[randomCell.r].cells[randomCell.c].tile = Tile(value: newValue)
+        if let chosen = empty.randomElement() {
+            let newTile = TileModel(value: 2, row: chosen.0, col: chosen.1)
+            tiles.append(newTile)
         }
     }
     
-    // MARK: - Game Move Logic
+    // Public spawn which preserves previous behavior (animated append) — still available if needed
+    func spawnNewTile() {
+        var empty: [(Int, Int)] = []
+        for r in 0..<size {
+            for c in 0..<size {
+                if tile(atRow: r, col: c) == nil {
+                    empty.append((r, c))
+                }
+            }
+        }
+        if let chosen = empty.randomElement() {
+            let newTile = TileModel(value: 2, row: chosen.0, col: chosen.1)
+            // Use animated append on main queue for nicer UX — but don't rely on this for logic checks
+            DispatchQueue.main.async {
+                withAnimation(.easeOut(duration: 0.12)) {
+                    self.tiles.append(newTile)
+                }
+            }
+        }
+    }
     
+    // MARK: - Helpers (read-only)
+    private func tileIndex(atRow r: Int, col c: Int) -> Int? {
+        tiles.firstIndex { $0.row == r && $0.col == c }
+    }
+    private func tile(atRow r: Int, col c: Int) -> TileModel? {
+        if let idx = tileIndex(atRow: r, col: c) { return tiles[idx] }
+        return nil
+    }
+    
+    // MARK: - Move (safe, compute final board first)
     func move(_ direction: Direction) {
-        if isGameOver { return }
+        guard !isGameOver else { return }
         
-        var didMove = false
-        var tempGrid = grid
+        // Snapshot current tiles to work on (pure data)
+        let currentTiles = tiles
+        
+        // Build board matrix from snapshot
+        var board: [[TileModel?]] = Array(repeating: Array(repeating: nil, count: size), count: size)
+        for t in currentTiles {
+            if t.row >= 0 && t.row < size && t.col >= 0 && t.col < size {
+                board[t.row][t.col] = t
+            }
+        }
+        
+        // transform helpers
+        func transpose(_ b: [[TileModel?]]) -> [[TileModel?]] {
+            var nb = Array(repeating: Array(repeating: nil as TileModel?, count: size), count: size)
+            for r in 0..<size {
+                for c in 0..<size {
+                    nb[c][r] = b[r][c]
+                }
+            }
+            return nb
+        }
+        func reverseRows(_ b: [[TileModel?]]) -> [[TileModel?]] {
+            var nb = b
+            for r in 0..<size { nb[r].reverse() }
+            return nb
+        }
+        
+        // Orient board so we always process left
+        var working = board
+        var needsReverseAfter = false
+        var needsTransposeAfter = false
         
         switch direction {
         case .left:
-            tempGrid = process(grid: tempGrid, didMove: &didMove)
+            break
         case .right:
-            tempGrid = reverseRows(grid: tempGrid)
-            tempGrid = process(grid: tempGrid, didMove: &didMove)
-            tempGrid = reverseRows(grid: tempGrid)
+            working = reverseRows(working)
+            needsReverseAfter = true
         case .up:
-            tempGrid = transpose(grid: tempGrid)
-            tempGrid = process(grid: tempGrid, didMove: &didMove)
-            tempGrid = transpose(grid: tempGrid)
+            working = transpose(working)
+            needsTransposeAfter = true
         case .down:
-            tempGrid = transpose(grid: tempGrid)
-            tempGrid = reverseRows(grid: tempGrid)
-            tempGrid = process(grid: tempGrid, didMove: &didMove)
-            tempGrid = reverseRows(grid: tempGrid)
-            tempGrid = transpose(grid: tempGrid)
+            working = transpose(working)
+            working = reverseRows(working)
+            needsReverseAfter = true
+            needsTransposeAfter = true
         }
         
-        grid = tempGrid
+        var moved = false
+        var newScoreGained = 0
         
-        if didMove {
-            spawnNewTile()
-            checkForGameOver()
-        }
-    }
-    
-    // MARK: - <<< PERBAIKAN LOGIKA ADA DI SINI >>>
-    
-    private func process(grid: [GridRow], didMove: inout Bool) -> [GridRow] {
-        var newGrid = grid
-        
-        for r in 0..<size {
-            // Simpan baris asli untuk perbandingan
-            let originalCells = newGrid[r].cells
+        // process one row -> returns [TileModel?] sized 'size'
+        func processRow(_ row: [TileModel?]) -> [TileModel?] {
+            var line: [TileModel] = []
+            for cell in row {
+                if let t = cell { line.append(t) }
+            }
+            if line.isEmpty {
+                return Array(repeating: nil as TileModel?, count: size)
+            }
             
-            // 1. Ambil tile yang ada
-            let tilesInRow = originalCells.compactMap { $0.tile }
-            
-            var mergedTiles: [Tile] = []
+            var mergedLine: [TileModel] = []
             var i = 0
-            
-            // 2. Logika Menggabungkan (Merge)
-            while i < tilesInRow.count {
-                let currentTile = tilesInRow[i]
-                
-                if i + 1 < tilesInRow.count && tilesInRow[i+1].value == currentTile.value {
-                    let newValue = currentTile.value * 2
-                    mergedTiles.append(Tile(value: newValue))
-                    score += newValue
+            while i < line.count {
+                if i + 1 < line.count && line[i].value == line[i + 1].value {
+                    // reuse left tile to preserve id (smooth animation)
+                    var kept = line[i]
+                    let combined = kept.value * 2
+                    kept.value = combined
+                    kept.merged = true
+                    mergedLine.append(kept)
+                    newScoreGained += combined
                     i += 2
-                    // Jangan set didMove di sini dulu
                 } else {
-                    mergedTiles.append(currentTile)
+                    mergedLine.append(line[i])
                     i += 1
                 }
             }
             
-            // 3. Tulis kembali baris baru
-            var newCells: [Cell] = []
-            for c in 0..<size {
-                if c < mergedTiles.count {
-                    newCells.append(Cell(tile: mergedTiles[c]))
-                } else {
-                    newCells.append(Cell(tile: nil))
-                }
-            }
+            // convert to optional row and pad with nils
+            var resultRow: [TileModel?] = mergedLine.map { $0 }
+            while resultRow.count < size { resultRow.append(nil) }
             
-            // 4. PERBAIKAN: Cek apakah baris baru berbeda dari baris lama
-            // Ini akan mendeteksi (merge) DAN (shift/geser)
-            var rowChanged = false
-            for c in 0..<size {
-                // Bandingkan nilainya, bukan ID-nya
-                if originalCells[c].tile?.value != newCells[c].tile?.value {
-                    rowChanged = true
+            // detect movement/changes by comparing id/value
+            for idx in 0..<size {
+                let orig = row[idx]
+                let res = resultRow[idx]
+                if orig?.id != res?.id || orig?.value != res?.value {
+                    moved = true
                     break
                 }
             }
+            return resultRow
+        }
+        
+        // process all rows
+        var processed = working
+        for r in 0..<size {
+            processed[r] = processRow(working[r])
+        }
+        
+        // revert orientation
+        var finalBoard = processed
+        if needsReverseAfter { finalBoard = reverseRows(finalBoard) }
+        if needsTransposeAfter { finalBoard = transpose(finalBoard) }
+        
+        // build finalTiles preserving ids & set positions
+        var finalTiles: [TileModel] = []
+        for r in 0..<size {
+            for c in 0..<size {
+                if var t = finalBoard[r][c] {
+                    t.row = r
+                    t.col = c
+                    finalTiles.append(t)
+                }
+            }
+        }
+        
+        // quick compare to see if anything changed at all
+        func different(_ a: [TileModel], _ b: [TileModel]) -> Bool {
+            if a.count != b.count { return true }
+            var mapA: [UUID:(Int,Int,Int)] = [:]
+            for t in a { mapA[t.id] = (t.row, t.col, t.value) }
+            for t in b {
+                if let v = mapA[t.id] {
+                    if v.0 != t.row || v.1 != t.col || v.2 != t.value { return true }
+                } else { return true }
+            }
+            return false
+        }
+        
+        let hasChanged = different(finalTiles, currentTiles)
+        if !hasChanged {
+            // nothing moved — keep status
+            DispatchQueue.main.async {
+                self.gameStatus = "Keep swiping!"
+            }
+            return
+        }
+        
+        // APPLY final state atomically (animated)
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.16)) {
+                self.tiles = finalTiles
+                self.score += newScoreGained
+            }
             
-            if rowChanged {
-                didMove = true // Set didMove jika baris ini berubah
+            // Decide what to do next depending on whether final board has empty cells
+            // Calculate empties from finalTiles (deterministic)
+            var hasEmpty = false
+            var boardVals = Array(repeating: Array(repeating: 0, count: self.size), count: self.size)
+            for t in finalTiles { boardVals[t.row][t.col] = t.value }
+            for rr in 0..<self.size {
+                for cc in 0..<self.size {
+                    if boardVals[rr][cc] == 0 { hasEmpty = true; break }
+                }
+                if hasEmpty { break }
             }
-            newGrid[r].cells = newCells
+            
+            if !hasEmpty {
+                // No empty cell — check merges on final board snapshot.
+                if !self.checkForGameOverUsing(board: boardVals) {
+                    // There is at least one possible merge → not game over
+                    self.gameStatus = "Keep swiping!"
+                } else {
+                    // No merges & no empty -> game over
+                    self.isGameOver = true
+                    self.gameStatus = "Game Over! Score: \(self.score)"
+                }
+            } else {
+                // There are empty cells -> spawn one immediately (synchronous) so next logic sees final board
+                self.spawnNewTileImmediate()
+                // after we appended the tile, check for game over reliably (run on next runloop to allow UI update)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                    self.checkForGameOver()
+                }
+            }
         }
-        return newGrid
     }
     
-    // MARK: - Game Over Check (Tidak Berubah)
+    // MARK: - Game over helpers
+    // Check using a value-board snapshot. Returns true if game IS OVER (no empty & no merges).
+    private func checkForGameOverUsing(board: [[Int]]) -> Bool {
+        // 1) if any zero -> not game over
+        for r in 0..<size {
+            for c in 0..<size {
+                if board[r][c] == 0 { return false }
+            }
+        }
+        // 2) check for possible merges
+        for r in 0..<size {
+            for c in 0..<size {
+                let val = board[r][c]
+                if c < size - 1 && board[r][c+1] == val { return false }
+                if r < size - 1 && board[r+1][c] == val { return false }
+            }
+        }
+        // no empty, no merges -> game over
+        return true
+    }
     
+    // Public checkForGameOver that reads current tiles
     func checkForGameOver() {
-        // Cek 1: Sel kosong?
-        for r in 0..<size {
-            for c in 0..<size {
-                if grid[r].cells[c].tile == nil {
-                    gameStatus = "Keep swiping!"
-                    return
-                }
+        // build snapshot of values
+        var board = Array(repeating: Array(repeating: 0, count: size), count: size)
+        for t in tiles {
+            board[t.row][t.col] = t.value
+        }
+        if checkForGameOverUsing(board: board) {
+            DispatchQueue.main.async {
+                self.isGameOver = true
+                self.gameStatus = "Game Over! Score: \(self.score)"
+            }
+        } else {
+            DispatchQueue.main.async {
+                self.gameStatus = "Keep swiping!"
             }
         }
-        
-        // Cek 2: Papan penuh. Masih bisa bergerak?
-        for r in 0..<size {
-            for c in 0..<size {
-                guard let value = grid[r].cells[c].tile?.value else { continue }
-                
-                if c < size - 1 && grid[r].cells[c+1].tile?.value == value {
-                    return
-                }
-                if r < size - 1 && grid[r+1].cells[c].tile?.value == value {
-                    return
-                }
-            }
-        }
-        
-        isGameOver = true
-        gameStatus = "Game Over! Score: \(score)"
-    }
-    
-    // MARK: - Grid Transform Helpers (Tidak Berubah)
-    
-    private func transpose(grid: [GridRow]) -> [GridRow] {
-        var newGrid = grid
-        for r in 0..<size {
-            for c in 0..<size {
-                newGrid[c].cells[r] = grid[r].cells[c]
-            }
-        }
-        return newGrid
-    }
-    
-    private func reverseRows(grid: [GridRow]) -> [GridRow] {
-        var newGrid = grid
-        for r in 0..<size {
-            newGrid[r].cells.reverse()
-        }
-        return newGrid
     }
 }
-
-
 
