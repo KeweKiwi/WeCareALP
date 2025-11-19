@@ -36,6 +36,9 @@ struct ReceiverGamesView: View {
     // State for presenting Memory Game
     @State private var isShowingMemory = false
     
+    // State for presenting Crossword Game (BARU DITAMBAHKAN)
+    @State private var isShowingCrossword = false
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -54,18 +57,28 @@ struct ReceiverGamesView: View {
                     VStack(spacing: 15) {
                         ForEach(recommendedGames) { game in
                             
-                            // Logic: If the game is Sudoku, show a button that triggers a sheet
+                            // Logic: Check game title to open correct view
+                            
                             if game.title == "Relaxing Sudoku" {
                                 Button(action: {
-                                    isShowingSudoku = true // Main action: show SudokuView
+                                    isShowingSudoku = true
                                 }) {
-                                    GameCard(game: game) // Card view
+                                    GameCard(game: game)
                                 }
-                                .buttonStyle(PlainButtonStyle()) // Ensures the card looks like a normal tile
+                                .buttonStyle(PlainButtonStyle())
                                 
                             } else if game.title == "Matching Pictures (Memory)" {
                                 Button(action: {
-                                    isShowingMemory = true // Show Memory Game View
+                                    isShowingMemory = true
+                                }) {
+                                    GameCard(game: game)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                            } else if game.title == "Daily Crossword" {
+                                // --- LOGIKA BARU UNTUK CROSSWORD ---
+                                Button(action: {
+                                    isShowingCrossword = true
                                 }) {
                                     GameCard(game: game)
                                 }
@@ -79,7 +92,7 @@ struct ReceiverGamesView: View {
                     }
                     .padding(.horizontal)
                     
-                    Text("✨ Note: Tap the Sudoku card to start playing.")
+                    Text("✨ Note: Tap the game cards to start playing.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.horizontal)
@@ -91,7 +104,7 @@ struct ReceiverGamesView: View {
             .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemGray6).ignoresSafeArea())
         }
-        // MODIFICATION: Adding sheet presentation for SudokuView
+        // Sheet for Sudoku
         .sheet(isPresented: $isShowingSudoku) {
             ReceiverSudokuGameView()
         }
@@ -99,19 +112,13 @@ struct ReceiverGamesView: View {
         .sheet(isPresented: $isShowingMemory) {
             ReceiverMemoryGameView()
         }
+        // Sheet for Crossword Game (BARU DITAMBAHKAN)
+        .sheet(isPresented: $isShowingCrossword) {
+            ReceiverCrosswordGameView()
+        }
     }
 }
-// MARK: - Game Components (Add this if not stored in a separate file)
-// Ensure the GameRecommendation model exists in your Models.swift
-/*
-struct GameRecommendation: Identifiable {
-    let id = UUID()
-    let title: String
-    let description: String
-    let icon: String
-    let color: Color
-}
-*/
+// MARK: - Game Components
 struct GameCard: View {
     let game: GameRecommendation
     
@@ -151,4 +158,3 @@ struct GameCard: View {
 #Preview {
     ReceiverGamesView()
 }
-
