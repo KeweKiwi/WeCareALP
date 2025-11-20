@@ -1,163 +1,146 @@
-////
-////  PersonListView.swift
-////  wecare kevin
-////
-////  Created by student on 05/11/25.
-////
-//import SwiftUI
-//enum Destination: Hashable {
-//    case location(GiverPersonCardViewData)
-//}
-//struct PersonListView: View {
-//    @StateObject var vm: GiverPersonListVM
-//    @State private var path: [Destination] = []
-//    
-//    var body: some View {
-//        NavigationStack(path: $path) {
-//            VStack(spacing: 12) {
-//                // MARK: - Title + Actions
-//                HStack {
-//                    Text("Persons").font(.title2).bold()
-//                    Spacer()
-//                    Button { } label: { Image(systemName: "magnifyingglass") }
-//                    Button { } label: { Image(systemName: "slider.horizontal.3") }
-//                }
-//                .padding(.horizontal)
-//                
-//                // MARK: - Filters + Sorting (CHIPS)
-//                ScrollView(.horizontal, showsIndicators: false) {
-//                    HStack(spacing: 8) {
-//                        ForEach(GiverPersonListVM.SortOption.allCases, id: \.self) { opt in
-//                            Chip(text: opt.rawValue, isSelected: vm.sort == opt) { vm.sort = opt }
-//                        }
-//                        ChipStatusDot(.healthy,  isOn: vm.filterStatus.contains(.healthy))  { toggle(.healthy) }
-//                        ChipStatusDot(.warning,  isOn: vm.filterStatus.contains(.warning))  { toggle(.warning) }
-//                        ChipStatusDot(.critical, isOn: vm.filterStatus.contains(.critical)) { toggle(.critical) }
-//                    }
-//                    .padding(.horizontal)
-//                }
-//                
-//                // MARK: - Person List
-//                ScrollView {
-//                    LazyVStack(spacing: 12) {
-//                        ForEach(vm.visible) { card in
-//                            GiverPersonCardView(
-//                                data: card,
-//                                onInfo: { print("INFO \(card.name)") },
-//                                onLocation: { path.append(.location(card)) }   // ✅ dorong destinasi
-//                            )
-//                            .padding(.horizontal)
-//                        }
-//                    }
-//                    .padding(.vertical, 8)
-//                }
-//            }
-//            .background(GiverColorPaletteView.base.ignoresSafeArea())
-//            .navigationDestination(for: Destination.self) { dest in   // ✅ handler rute
-//                switch dest {
-//                case .location(let person):
-//                    GiverLocationView(person: person)
-//                }
-//            }
-//        }
-//        
-//        
-//    }
-//    
-//struct Chip: View {
-//        let text: String
-//        let isSelected: Bool
-//        var action: () -> Void
-//        var body: some View {
-//            Button(action: action) {
-//                Text(text)
-//                    .font(.subheadline)
-//                    .padding(.horizontal, 12)
-//                    .padding(.vertical, 6)
-//                    .background(
-//                        Capsule().fill(isSelected ? GiverColorPaletteView.skyBlue.opacity(0.25) : .white)
-//                    )
-//                    .overlay(
-//                        Capsule().stroke(isSelected ? GiverColorPaletteView.skyBlue : Color.black.opacity(0.1))
-//                    )
-//            }
-//            .buttonStyle(.plain)
-//        }
-//    }
-//struct ChipIcon: View {
-//        let system: String
-//        let isSelected: Bool
-//        var action: () -> Void
-//        var body: some View {
-//            Button(action: action) {
-//                Image(systemName: system)
-//                    .font(.body)
-//                    .padding(8)
-//                    .background(
-//                        Circle().fill(isSelected ? GiverColorPaletteView.skyBlue.opacity(0.25) : .white)
-//                    )
-//                    .overlay(
-//                        Circle().stroke(isSelected ? GiverColorPaletteView.skyBlue : Color.black.opacity(0.1))
-//                    )
-//                    .shadow(radius: 1, y: 1)
-//            }
-//            .buttonStyle(.plain)
-//        }
-//    }
-//struct ChipStatusDot: View {
-//    let status: GiverPersonCardViewData.Status
-//    let isOn: Bool
-//    var action: () -> Void
-//    
-//    
-//    init(_ status: GiverPersonCardViewData.Status, isOn: Bool, action: @escaping () -> Void) {
-//        self.status = status
-//        self.isOn = isOn
-//        self.action = action
-//    }
-//    var body: some View {
-//        Button(action: action) {
-//            HStack(spacing: 6) {
-//                Circle()
-//                    .fill(color)
-//                    .frame(width: 10, height: 10)
-//                Text(label)
-//                    .font(.subheadline)
-//            }
-//            .padding(.horizontal, 10)
-//            .padding(.vertical, 6)
-//            .background(Capsule().fill(isOn ? color.opacity(0.18) : .white))
-//            .overlay(Capsule().stroke(isOn ? color : Color.black.opacity(0.1)))
-//        }
-//        .buttonStyle(.plain)
-//    }
-//    private var color: Color {
-//        switch status {
-//        case .healthy:  return GiverColorPaletteView.green
-//        case .warning:  return GiverColorPaletteView.yellow
-//        case .critical: return GiverColorPaletteView.red
-//        }
-//    }
-//    private var label: String {
-//        switch status {
-//        case .healthy: return "Healthy"
-//        case .warning: return "Warning"
-//        case .critical: return "Critical"
-//        }
-//    }
-//}
-//    // Toggle status (Healthy / Warning / Critical)
-//       private func toggle(_ s: GiverPersonCardViewData.Status) {
-//           if vm.filterStatus.contains(s) {
-//               vm.filterStatus.remove(s)
-//           } else {
-//               vm.filterStatus.insert(s)
-//           }
-//       }
-//   }
-//#Preview("PersonListView") {
-//    NavigationStack {
-//        PersonListView(vm: GiverPersonListVM(seed: SampleData.demoList))
-//    }
-//}
-//
+import SwiftUI
+enum PersonDestination: Hashable {
+    case location(GiverPersonCardViewData)
+    case family(GiverPersonCardViewData)
+}
+struct GiverPersonListView: View {
+    
+    private let persons: [GiverPersonCardViewData] = [
+        GiverPersonCardViewData(
+            name: "Grandma Anna",
+            role: "Care Receiver",
+            avatarURL: nil,
+            status: .healthy,
+            heartRate: 78,
+            steps: 3450,
+            familyCode: "123456",
+            familyMembers: ["Daughter: Lisa", "Son: Michael", "Grandson: Kevin"]
+        ),
+        GiverPersonCardViewData(
+            name: "Grandpa John",
+            role: "Care Receiver",
+            avatarURL: nil,
+            status: .warning,
+            heartRate: 95,
+            steps: 1200,
+            familyCode: "998877",
+            familyMembers: ["Wife: Maria", "Son: David"]
+        ),
+        GiverPersonCardViewData(
+            name: "Auntie Maria",
+            role: "Care Receiver",
+            avatarURL: nil,
+            status: .critical,
+            heartRate: 110,
+            steps: 300,
+            familyCode: "445566",
+            familyMembers: ["Niece: Anna"]
+        )
+    ]
+    
+    @State private var filter: GiverPersonCardViewData.Status? = nil
+    @State private var path: [PersonDestination] = []
+    
+    private var filtered: [GiverPersonCardViewData] {
+        if let filter {
+            return persons.filter { $0.status == filter }
+        }
+        return persons
+    }
+    
+    var body: some View {
+        NavigationStack(path: $path) {
+            VStack(spacing: 12) {
+                
+                HStack {
+                    Text("Persons")
+                        .font(.title2)
+                        .bold()
+                    Spacer()
+                    Image(systemName: "magnifyingglass")
+                    Image(systemName: "slider.horizontal.3")
+                }
+                .padding(.horizontal)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        FilterChip(text: "All", isSelected: filter == nil) {
+                            filter = nil
+                        }
+                        FilterChip(text: "Healthy", isSelected: filter == .healthy) {
+                            filter = .healthy
+                        }
+                        FilterChip(text: "Warning", isSelected: filter == .warning) {
+                            filter = .warning
+                        }
+                        FilterChip(text: "Critical", isSelected: filter == .critical) {
+                            filter = .critical
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(filtered) { person in
+                            GiverPersonCardView(
+                                data: person,
+                                onInfo: {
+                                    // nanti bisa isi detail lain
+                                },
+                                onLocation: {
+                                    path.append(.location(person))
+                                },
+                                onCardTap: {
+                                    path.append(.family(person))
+                                }
+                            )
+                        }
+                        .padding(.horizontal)
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .navigationDestination(for: PersonDestination.self) { dest in
+                switch dest {
+                case .location(let person):
+                    GiverLocationView(person: person)
+                case .family(let person):
+                    GiverFamilyDetailView(person: person)
+                }
+            }
+        }
+    }
+}
+struct FilterChip: View {
+    let text: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(text)
+                .font(.subheadline)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? Color(.systemGray5) : Color(.systemGray6))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            isSelected ? Color.blue : Color(.systemGray4),
+                            lineWidth: 1
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+#Preview {
+    GiverPersonListView()
+}
+
+
