@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3F656C8E2ECD85AF006D8312 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3F656C8D2ECD85AF006D8312 /* GoogleService-Info.plist */; };
 		3F656C912ECD8775006D8312 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 3F656C902ECD8775006D8312 /* FirebaseAnalytics */; };
 		3F656C932ECD8BD7006D8312 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 3F656C922ECD8BD7006D8312 /* FirebaseAuth */; };
 		3F656C952ECD8BD7006D8312 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3F656C942ECD8BD7006D8312 /* FirebaseCore */; };
 		3F656C972ECD8BD7006D8312 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 3F656C962ECD8BD7006D8312 /* FirebaseFirestore */; };
+		3FB3A4D02ECEF204001EDFDA /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3FB3A4CF2ECEF204001EDFDA /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,7 +35,6 @@
 		3F394B2A2EC597C000E51CE4 /* WeCare.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WeCare.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F394B372EC597C100E51CE4 /* WeCareTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WeCareTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F394B412EC597C100E51CE4 /* WeCareUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WeCareUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		3F656C8D2ECD85AF006D8312 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -88,7 +87,6 @@
 		3F394B212EC597C000E51CE4 = {
 			isa = PBXGroup;
 			children = (
-				3F656C8D2ECD85AF006D8312 /* GoogleService-Info.plist */,
 				3F394B2C2EC597C000E51CE4 /* WeCare */,
 				3F394B3A2EC597C100E51CE4 /* WeCareTests */,
 				3F394B442EC597C100E51CE4 /* WeCareUITests */,
@@ -233,7 +231,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3F656C8E2ECD85AF006D8312 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

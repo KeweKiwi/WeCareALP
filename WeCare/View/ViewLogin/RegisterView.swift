@@ -23,17 +23,17 @@ struct RegisterView: View {
                     } label: {
                         BigTile(
                             title: "Care Receiver",
-                            imageName: "carereceiver", // sesuaikan dengan Assets
+                            imageName: "carereceiver",
                             bg: Brand.green
                         )
                     }
-                    // Care Giver (sky) -> Biodata Care Taker (di file terpisah)
+                    // Care Giver (sky) -> Biodata Care Taker
                     NavigationLink {
-                        GiverFormView()
+                            GiverFormView()
                     } label: {
                         BigTile(
                             title: "Care Giver",
-                            imageName: "caregiver",    // sesuaikan dengan Assets
+                            imageName: "caregiver",
                             bg: Brand.sky
                         )
                     }
@@ -60,7 +60,7 @@ struct BigTile: View {
                 .resizable()
                 .scaledToFill()
                 .frame(maxWidth: .infinity)
-                .frame(height: 260) // atur agar 2 tile muat 1 layar
+                .frame(height: 260)
                 .clipped()
                 .overlay(bg.opacity(0.25))
                 .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -80,27 +80,34 @@ struct BigTile: View {
     }
 }
 // =====================================================
-// MARK: - FAMILY CODE VIEW (6-digit; tips card; tombol Paste)
+// MARK: - FAMILY CODE VIEW (6-digit; ke pilih biodata)
 // =====================================================
 struct FamilyCodeView: View {
     @State private var familyCode: String = ""
     @FocusState private var isFocused: Bool
     @State private var errorMessage: String? = nil
+    @State private var goToSelect: Bool = false
     var body: some View {
         ZStack {
             Brand.vlight.opacity(0.25).ignoresSafeArea()
-            ScrollView {     // 👈 bikin bisa scroll, tidak kepotong saat keyboard muncul
+            ScrollView {
                 VStack(spacing: 20) {
+                    // Nav ke pilih biodata (hidden)
+                    NavigationLink(
+                        destination: CareReceiverSelectView(familyCode: familyCode),
+                        isActive: $goToSelect
+                    ) {
+                        EmptyView()
+                    }
+                    .hidden()
                     Text("Please enter Family Code")
                         .font(.title2.bold())
                     Text("Use the 6 digit family code given by your caretaker.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.leading)
-                    // OTP boxes (tap untuk fokus)
                     OTPBoxes(code: familyCode, slots: 6)
                         .onTapGesture { isFocused = true }
-                    // Tombol Paste + helper
                     HStack(spacing: 12) {
                         Button {
                             #if canImport(UIKit)
@@ -132,7 +139,6 @@ struct FamilyCodeView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    // TextField tersembunyi utk menangkap angka
                     TextField("", text: Binding(
                         get: { familyCode },
                         set: { newValue in
@@ -156,18 +162,20 @@ struct FamilyCodeView: View {
                     Button {
                         if familyCode.count < 6 {
                             errorMessage = "Code must be 6 digits"
+                        } else {
+                            // Nanti di sini: call API cek code
+                            // kalau OK:
+                            goToSelect = true
                         }
-                        // TODO: verify familyCode ke backend, lalu navigate
                     } label: {
                         Text("Continue")
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(familyCode.count == 6 ? .black : .gray.opacity(0.3))
+                            .background(familyCode.count == 6 ? Color.black : Color.gray.opacity(0.3))
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     .disabled(familyCode.count != 6)
-                    // Tips card
                     VStack(spacing: 14) {
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "info.circle.fill")
@@ -179,7 +187,6 @@ struct FamilyCodeView: View {
                                 Text("Ask your caretaker to open WeCare and share the 6-digit family code with you.")
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.leading)
                             }
                             Spacer()
                         }
@@ -195,7 +202,6 @@ struct FamilyCodeView: View {
                         .shadow(color: .black.opacity(0.04), radius: 6, y: 4)
                     }
                     .padding(.top, 8)
-                    // kasih sedikit bottom padding biar nggak nempel keyboard
                     Spacer().frame(height: 16)
                 }
                 .padding(20)
@@ -205,7 +211,7 @@ struct FamilyCodeView: View {
     }
 }
 // =====================================================
-// MARK: - OTP BOXES (blank saat kosong + kedip di aktif)
+// MARK: - OTP BOXES (blank saat kosong + kedip slot aktif)
 // =====================================================
 struct OTPBoxes: View {
     let code: String
@@ -244,8 +250,9 @@ struct OTPBoxes: View {
         }
     }
     private func digit(at index: Int) -> String {
-        guard index < code.count else { return "" } // kosong = blank
+        guard index < code.count else { return "" }
         return String(Array(code)[index])
     }
 }
+
 

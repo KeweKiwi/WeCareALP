@@ -108,7 +108,7 @@ struct GiverFormView: View {
                 Button {
                     addMember()
                 } label: {
-                    Label("+ Add member", systemImage: "plus.circle.fill")
+                    Label("Add member", systemImage: "plus.circle.fill")
                         .font(.body.weight(.semibold))
                 }
             }
@@ -163,4 +163,5 @@ struct GiverFormView: View {
         }
     }
 }
+
 
