@@ -2,7 +2,7 @@ import Foundation
 import FirebaseFirestore
 
 
-struct Users: Identifiable {
+struct Users: Identifiable, Hashable {
     /// id = Firestore document ID (bukan user_id angka)
     let id: String
 

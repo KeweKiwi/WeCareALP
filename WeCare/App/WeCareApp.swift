@@ -27,7 +27,7 @@ struct WeCareApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ReceiverGame2048View()
+            GiverCalendarView()
         }
     }
 }
