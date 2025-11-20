@@ -24,6 +24,7 @@ struct ReceiverView: View {
                 }
         }
         .accentColor(Color(hex: "#387b38"))
+        .navigationBarBackButtonHidden(true)
     }
 }
 // MARK: - Preview (for Xcode)
