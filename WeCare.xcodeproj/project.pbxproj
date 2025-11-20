@@ -11,6 +11,7 @@
 		3F656C932ECD8BD7006D8312 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 3F656C922ECD8BD7006D8312 /* FirebaseAuth */; };
 		3F656C952ECD8BD7006D8312 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3F656C942ECD8BD7006D8312 /* FirebaseCore */; };
 		3F656C972ECD8BD7006D8312 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 3F656C962ECD8BD7006D8312 /* FirebaseFirestore */; };
+		3FB3A4D02ECEF204001EDFDA /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3FB3A4CF2ECEF204001EDFDA /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */

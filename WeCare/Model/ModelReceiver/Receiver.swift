@@ -1,5 +1,5 @@
 import Foundation
-import SwiftUI // Diperlukan untuk Color Extension
+import SwiftUI
 // MARK: - App Models
 struct TaskItem: Identifiable {
     let id = UUID()
@@ -13,6 +13,26 @@ struct GameRecommendation: Identifiable {
     let description: String
     let icon: String
     let color: Color
+}
+// MARK: - Crossword Models
+struct CrosswordCell: Identifiable {
+    let id = UUID()
+    let row: Int
+    let col: Int
+    let clueNumber: Int? // Angka kecil di pojok
+    let answer: String
+    var input: String = ""
+    var isCorrect: Bool = false
+    
+    // Jika tidak ada jawaban (answer kosong), maka sel ini "blocked" (tembok hitam/kosong)
+    var isBlocked: Bool { answer.isEmpty }
+    
+    init(row: Int, col: Int, clueNumber: Int? = nil, answer: String) {
+        self.row = row
+        self.col = col
+        self.clueNumber = clueNumber
+        self.answer = answer.uppercased()
+    }
 }
 // MARK: - Utility Extension
 extension Color {
@@ -35,6 +55,3 @@ extension Color {
         )
     }
 }
-
-
-

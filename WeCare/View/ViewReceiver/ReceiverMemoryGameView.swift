@@ -1,146 +1,216 @@
 import SwiftUI
-// MARK: - Memory Game View (Accessed from GamesView)
 struct ReceiverMemoryGameView: View {
     @StateObject var game = ReceiverMemoryGameVM()
     @Environment(\.dismiss) var dismiss
     
-    // BARU: State untuk melacak kesulitan yang dipilih
     @State private var selectedDifficulty: Difficulty = .easy
     
-    // 4-column grid layout (tetap 4 kolom, jumlah baris akan bertambah)
-    let columns: [GridItem] = Array(repeating: .init(.flexible()), count: 4)
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            
-            // MARK: - Header & Back Button
-            HStack {
-                Text("Memory Check")
-                    .font(.largeTitle.bold())
-                    .foregroundColor(Color(hex: "#387b38"))
-                Spacer()
-                Button("Back") {
-                    dismiss()
-                }
-                .font(.title3.bold())
-                .foregroundColor(.black)
-                .padding(8)
-                .background(Color(hex: "#fdcb46"))
-                .cornerRadius(10)
-            }
-            .padding([.horizontal, .top])
-            
-            // MARK: - Status Info
-            HStack {
-                Text("Moves: **\(game.moves)**")
-                    .font(.title2)
-                Spacer()
-                Text(game.gameStatus)
-                    .font(.title3)
-            }
-            .padding(.horizontal)
-            
-            // MARK: - BARU: Difficulty Selector
-            Picker("Difficulty", selection: $selectedDifficulty) {
-                ForEach(Difficulty.allCases) { difficulty in
-                    Text(difficulty.rawValue).tag(difficulty)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .onChange(of: selectedDifficulty) { newDifficulty in
-                // Jika user ganti level, mulai game baru
-                withAnimation {
-                    game.startNewGame(difficulty: newDifficulty)
-                }
-            }
-            
-            // MARK: - Game Grid
-            LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(game.cards) { card in
-                    
-                    ZStack {
-                        // 1. Kartu itu sendiri (akan dissolve/fade-out)
-                        CardView(card: card)
-                            .onTapGesture {
-                                withAnimation(.easeInOut) {
-                                    game.choose(card)
-                                }
-                            }
-                            .opacity(card.isMatched ? 0 : 1)
-                            .animation(.easeOut(duration: 0.5), value: card.isMatched)
-                        
-                        // 2. Efek "Bertabur Emas"
-                        if card.isMatched {
-                            GoldSparklesView()
-                                .transition(.opacity.animation(.easeOut(duration: 1.0)))
-                        }
-                    }
-                    .aspectRatio(1, contentMode: .fit)
-                }
-            }
-            .padding(.horizontal)
-            
-            Spacer()
-            
-            // MARK: - New Game Button
-            Button("Start New Game") {
-                // DIMODIFIKASI: Mulai game baru dengan kesulitan yang dipilih
-                withAnimation {
-                    game.startNewGame(difficulty: selectedDifficulty)
-                }
-            }
-            .font(.title2.bold())
-            .padding(15)
-            .frame(maxWidth: .infinity)
-            .background(Color(hex: "#fa6255"))
-            .foregroundColor(.white)
-            .cornerRadius(15)
-            .padding(.horizontal)
-        }
-        .padding(.top, 20)
-        .background(Color(.systemGray6).ignoresSafeArea())
-    }
-}
-// MARK: - Component: CardView (Tidak berubah)
-struct CardView: View {
-    let card: MemoryCard
+    // Grid layout
+    let columns: [GridItem] = Array(repeating: .init(.flexible(), spacing: 15), count: 4)
     
     var body: some View {
         ZStack {
-            let shape = RoundedRectangle(cornerRadius: 15)
+            // 1. BACKGROUND: Off-White Gradient (Supaya tidak flat membosankan)
+            LinearGradient(
+                gradient: Gradient(colors: [Color(hex: "#F5F7FA"), Color(hex: "#C3CFE2")]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
             
-            if card.isFaceUp || card.isMatched {
-                // View when the card is face-up
-                shape.fill().foregroundColor(.white)
-                shape.strokeBorder(Color(hex: "#387b38"), lineWidth: 4)
-                Text(card.content)
-                    .font(.system(size: 45)) // Large emoji
-            } else {
-                // Back side of the card
-                shape.fill(Color(hex: "#387b38")) // Dark green color
+            VStack(spacing: 20) {
+                
+                // MARK: - HEADER AREA
+                HStack {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                            .font(.title3.bold())
+                            .foregroundColor(.black)
+                            .padding(10)
+                            .background(Color.white)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
+                    }
+                    
+                    Spacer()
+                    
+                    Text("Memory Check")
+                        .font(.system(size: 24, weight: .heavy, design: .rounded))
+                        .foregroundColor(Color(hex: "#2C3E50"))
+                    
+                    Spacer()
+                    
+                    // Moves Badge
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
+                            .font(.caption)
+                        Text("\(game.moves)")
+                            .font(.headline)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(Color.white)
+                    .clipShape(Capsule())
+                    .foregroundColor(Color(hex: "#2C3E50"))
+                    .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
+                }
+                .padding(.horizontal)
+                .padding(.top, 10)
+                
+                // MARK: - DIFFICULTY SELECTOR (Glassmorphism Style)
+                Picker("Difficulty", selection: $selectedDifficulty) {
+                    ForEach(Difficulty.allCases) { difficulty in
+                        Text(difficulty.rawValue).tag(difficulty)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(5)
+                .background(Color.white.opacity(0.6)) // Semi transparan
+                .cornerRadius(12)
+                .padding(.horizontal)
+                .onChange(of: selectedDifficulty) { newDifficulty in
+                    withAnimation {
+                        game.startNewGame(difficulty: newDifficulty)
+                    }
+                }
+                
+                // MARK: - GAME BOARD (Area Putih Utama)
+                VStack {
+                    // Status Text
+                    Text(game.gameStatus)
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundColor(game.isGameOver ? .green : .secondary)
+                        .padding(.top, 10)
+                        .animation(.easeInOut, value: game.gameStatus)
+                    
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: 15) {
+                            ForEach(game.cards) { card in
+                                ZStack {
+                                    CardView(card: card)
+                                        .aspectRatio(2/3, contentMode: .fit)
+                                        .onTapGesture {
+                                            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+                                                game.choose(card)
+                                            }
+                                        }
+                                    
+                                    if card.isMatched {
+                                        GoldSparklesView()
+                                    }
+                                }
+                            }
+                        }
+                        .padding(20)
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 25)
+                        .fill(Color.white)
+                        // Shadow lembut di sekeliling board agar terlihat "melayang"
+                        .shadow(color: Color(hex: "#2C3E50").opacity(0.1), radius: 15, x: 0, y: 10)
+                )
+                .padding(.horizontal)
+                
+                // MARK: - RESTART BUTTON
+                Button(action: {
+                    withAnimation {
+                        game.startNewGame(difficulty: selectedDifficulty)
+                    }
+                }) {
+                    Text("Restart Game")
+                        .font(.headline.bold())
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color(hex: "#FF8008"), Color(hex: "#FFC837")]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(20)
+                        .shadow(color: Color.orange.opacity(0.4), radius: 10, x: 0, y: 5)
+                }
+                .padding(.horizontal, 40)
+                .padding(.bottom, 20)
             }
         }
     }
 }
-// MARK: - EFEK BARU: Gold Sparkles (Tidak berubah)
+// MARK: - CARD VIEW (Modern Look)
+struct CardView: View {
+    let card: MemoryCard
+    
+    var rotation: Double {
+        (card.isFaceUp || card.isMatched) ? 0 : 180
+    }
+    
+    var body: some View {
+        ZStack {
+            // SISI DEPAN (EMOJI)
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+                // Inner Shadow effect untuk kedalaman
+                .shadow(color: .black.opacity(0.05), radius: 2, x: 1, y: 1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+                )
+                .overlay(
+                    Text(card.content)
+                        .font(.system(size: 38))
+                        .opacity(card.isMatched ? 0.5 : 1)
+                        .scaleEffect(card.isMatched ? 1.2 : 1)
+                )
+                .opacity((card.isFaceUp || card.isMatched) ? 1 : 0)
+            
+            // SISI BELAKANG (GRADIENT MODERN HIJAU)
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color(hex: "#43e97b"), Color(hex: "#38f9d7")]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: Color(hex: "#43e97b").opacity(0.4), radius: 4, x: 0, y: 4)
+                
+                Image(systemName: "leaf.fill") // Ikon daun agar lebih natural/fresh
+                    .font(.system(size: 24))
+                    .foregroundColor(.white)
+                    .opacity(0.8)
+            }
+            .opacity((card.isFaceUp || card.isMatched) ? 0 : 1)
+        }
+        .rotation3DEffect(
+            .degrees(rotation),
+            axis: (x: 0.0, y: 1.0, z: 0.0)
+        )
+        .allowsHitTesting(!card.isMatched)
+    }
+}
+// MARK: - SPARKLES (Sama seperti sebelumnya)
 struct GoldSparklesView: View {
     @State private var isAnimating = false
-    private let particleCount = 12 // Jumlah partikel
+    private let particleCount = 12
     
     var body: some View {
         ZStack {
             ForEach(0..<particleCount, id: \.self) { _ in
-                Image(systemName: "sparkle.fill")
-                    .font(.caption)
-                    .foregroundColor(Color(hex: "#fdcb46"))
-                    .offset(x: isAnimating ? .random(in: -50...50) : 0,
-                            y: isAnimating ? .random(in: -50...50) : 0)
-                    .scaleEffect(isAnimating ? .random(in: 1.0...1.5) : 0.5)
+                Image(systemName: "star.fill")
+                    .font(.caption2)
+                    .foregroundColor(Color(hex: "#FFD700"))
+                    .offset(x: isAnimating ? .random(in: -35...35) : 0,
+                            y: isAnimating ? .random(in: -35...35) : 0)
+                    .scaleEffect(isAnimating ? .random(in: 0.5...1.0) : 0.1)
                     .opacity(isAnimating ? 0 : 1)
                     .animation(
-                        Animation.easeOut(duration: 0.8)
-                            .delay(.random(in: 0.1...0.3)),
+                        Animation.easeOut(duration: 1.0)
+                            .repeatForever(autoreverses: false)
+                            .delay(.random(in: 0.0...0.3)),
                         value: isAnimating
                     )
             }
@@ -150,7 +220,7 @@ struct GoldSparklesView: View {
         }
     }
 }
+// Preview
 #Preview {
     ReceiverMemoryGameView()
 }
-
