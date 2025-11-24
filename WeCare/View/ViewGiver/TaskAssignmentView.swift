@@ -41,7 +41,7 @@ struct TaskAssignmentView: View {
             }
             .padding()
             .sheet(isPresented: $requestSent) {
-                VolunteerConfirmationView(volunteer: volunteer)
+                VolunteerConfirmationView(viewModel: VolunteerConfirmationVM(volunteer: volunteer))
             }
         }
         .padding()
