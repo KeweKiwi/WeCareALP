@@ -4,7 +4,9 @@
 //
 //  Created by student on 19/11/25.
 // INGAT: VIEW INI AKAN MUNCUL SETELAH DI DALAM KONTAINER DETAIL LANSIA KITA BISA MINTOL FIND VOLUNTEER
-// yg masih kurang: tampilan maps, pas tampilan vidcall itu jgn force vidcall tp usahakan bisa kyk gojek bisa chat atau call sampe selese, tips di akhir
+// yg masih kurang: tampilan vicall dan call, history chat || pov sebegai pengaju menjadi volunteer
+// yg dilakukan saat ada database: tampilan maps itu jaraknya harus sama dengan person card
+
 import SwiftUI
 struct VolunteerFinderView: View {
     @StateObject private var viewModel = VolunteerFinderVM()
@@ -33,7 +35,9 @@ struct VolunteerFinderView: View {
                     ScrollView {
                         VStack(spacing: 15) {
                             ForEach(viewModel.volunteers) { volunteer in
-                                NavigationLink(destination: VolunteerDetailView(volunteer: volunteer)) {
+                                NavigationLink(
+                                    destination: VolunteerDetailView(viewModel: VolunteerDetailVM(volunteer: volunteer))
+                                ) {
                                     VolunteerCard(volunteer: volunteer)
                                 }
                                 .buttonStyle(PlainButtonStyle())
