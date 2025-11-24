@@ -1,11 +1,9 @@
 import SwiftUI
+
 struct ReceiverCrosswordGameView: View {
     
     @StateObject private var viewModel = CrosswordViewModel()
     @Environment(\.dismiss) var dismiss
-    
-    // Grid 10x10
-    let columns: [GridItem] = Array(repeating: .init(.flexible(), spacing: 0), count: 10)
     
     var body: some View {
         VStack(spacing: 0) {
@@ -20,11 +18,9 @@ struct ReceiverCrosswordGameView: View {
                         .foregroundColor(viewModel.isPuzzleSolved ? .green : .secondary)
                         .padding(.top, 10)
                     
-                    // 3. Grid Area
-                    // Tidak pakai border luar agar terlihat floating seperti Criss-Cross
-                    crosswordGrid
-                        .padding()
-                        .aspectRatio(1, contentMode: .fit)
+                    // 3. Grid Area - FIXED VERSION
+                    crosswordGridFixed
+                        .padding(.horizontal)
                     
                     // 4. Clues
                     ClueListView(across: viewModel.cluesAcross, down: viewModel.cluesDown)
@@ -32,7 +28,7 @@ struct ReceiverCrosswordGameView: View {
                     // 5. Action Buttons
                     actionButtons
                 }
-                .padding(.bottom, 100)
+                .padding(.bottom, 20)
             }
             
             // 6. Keyboard
@@ -63,46 +59,82 @@ struct ReceiverCrosswordGameView: View {
         .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
     }
     
-    private var crosswordGrid: some View {
-        GeometryReader { geo in
-            let totalWidth = geo.size.width
-            let cellSize = totalWidth / CGFloat(viewModel.numCols)
+    // FIXED: Menggunakan pendekatan yang lebih stabil
+    private var crosswordGridFixed: some View {
+        GeometryReader { geometry in
+            let availableWidth = geometry.size.width
+            let cellSize = availableWidth / CGFloat(viewModel.numCols)
+            let totalHeight = cellSize * CGFloat(viewModel.numRows)
             
-            LazyVGrid(columns: columns, spacing: 0) {
-                ForEach(viewModel.grid.flatMap { $0 }) { cell in
-                    CrosswordCellView(
-                        cell: cell,
-                        isSelected: cell.id == viewModel.selectedCellID,
-                        size: cellSize
-                    )
-                    .onTapGesture {
-                        viewModel.selectCell(cell)
+            VStack(spacing: 0) {
+                ForEach(0..<viewModel.numRows, id: \.self) { row in
+                    HStack(spacing: 0) {
+                        ForEach(0..<viewModel.numCols, id: \.self) { col in
+                            let cell = viewModel.grid[row][col]
+                            CrosswordCellView(
+                                cell: cell,
+                                isSelected: cell.id == viewModel.selectedCellID,
+                                size: cellSize
+                            )
+                            .onTapGesture {
+                                viewModel.selectCell(cell)
+                            }
+                        }
                     }
                 }
             }
+            .frame(width: availableWidth, height: totalHeight)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
+        .frame(height: UIScreen.main.bounds.width - 32) // Fixed height based on screen width
     }
     
     private var actionButtons: some View {
         HStack(spacing: 15) {
             Button(action: { viewModel.checkAnswers() }) {
-                Text("Check")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color(hex: "#a6d17d"))
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Check")
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color(hex: "#a6d17d"),
+                            Color(hex: "#8bc34a")
+                        ]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                .shadow(color: Color(hex: "#a6d17d").opacity(0.4), radius: 6, y: 3)
             }
             
             Button(action: { viewModel.createPuzzle() }) {
-                Text("Reset")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color(hex: "#fa6255"))
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
+                HStack {
+                    Image(systemName: "arrow.clockwise.circle.fill")
+                    Text("Reset")
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color(hex: "#fa6255"),
+                            Color(hex: "#ef4444")
+                        ]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                .shadow(color: Color(hex: "#fa6255").opacity(0.4), radius: 6, y: 3)
             }
         }
         .padding(.horizontal)
@@ -117,6 +149,7 @@ struct ReceiverCrosswordGameView: View {
         .padding(.top, 10)
     }
 }
+
 // MARK: - Visual Kotak (Criss-Cross Style)
 struct CrosswordCellView: View {
     let cell: CrosswordCell
@@ -131,22 +164,22 @@ struct CrosswordCellView: View {
                 Rectangle()
                     .fill(Color.white)
                 
-                // 2. Border Hitam Tegas (Agar terlihat seperti kotak teka-teki)
+                // 2. Border Hitam Tegas
                 Rectangle()
-                    .stroke(Color.black, lineWidth: 1)
+                    .stroke(Color.black, lineWidth: 1.5)
                 
                 // 3. Highlight jika dipilih
                 if isSelected {
                     Rectangle()
-                        .fill(Color.yellow.opacity(0.3))
+                        .fill(Color(hex: "#fef08a").opacity(0.5))
                     Rectangle()
-                        .stroke(Color.blue, lineWidth: 2)
+                        .stroke(Color(hex: "#3b82f6"), lineWidth: 3)
                 }
                 
                 // 4. Nomor Petunjuk
                 if let clueNo = cell.clueNumber {
                     Text("\(clueNo)")
-                        .font(.system(size: size * 0.3, weight: .semibold, design: .serif))
+                        .font(.system(size: max(8, size * 0.25), weight: .semibold, design: .serif))
                         .foregroundColor(.black)
                         .frame(width: size, height: size, alignment: .topLeading)
                         .padding(2)
@@ -154,17 +187,19 @@ struct CrosswordCellView: View {
                 
                 // 5. Input Huruf
                 Text(cell.input)
-                    .font(.system(size: size * 0.6, weight: .bold, design: .serif))
-                    .foregroundColor(cell.isCorrect ? Color(hex: "#66BB6A") : .black)
+                    .font(.system(size: max(14, size * 0.55), weight: .bold, design: .serif))
+                    .foregroundColor(cell.isCorrect ? Color(hex: "#16a34a") : .black)
+                    .frame(width: size, height: size)
             } else {
                 // JIKA BLOCKED: Transparan total
                 Color.clear
             }
         }
         .frame(width: size, height: size)
-        .contentShape(Rectangle()) // Memastikan tap gesture bekerja akurat
+        .contentShape(Rectangle())
     }
 }
+
 // MARK: - Clue List View
 struct ClueListView: View {
     let across: [String]
@@ -173,87 +208,127 @@ struct ClueListView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Clues")
-                .font(.title3.bold())
+                .font(.title2.bold())
                 .foregroundColor(.black)
             
-            HStack(alignment: .top, spacing: 20) {
+            HStack(alignment: .top, spacing: 15) {
                 // Across
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Across")
-                        .font(.headline)
-                        .foregroundColor(Color(hex: "#4A90E2"))
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Image(systemName: "arrow.right")
+                            .foregroundColor(Color(hex: "#3b82f6"))
+                        Text("Across")
+                            .font(.headline)
+                            .foregroundColor(Color(hex: "#3b82f6"))
+                    }
+                    
                     ForEach(across, id: \.self) { clue in
-                        Text(clue)
-                            .font(.caption)
-                            .foregroundColor(.black)
-                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(alignment: .top, spacing: 6) {
+                            Text("•")
+                                .foregroundColor(Color(hex: "#3b82f6"))
+                            Text(clue)
+                                .font(.subheadline)
+                                .foregroundColor(.black)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
-                Divider()
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(hex: "#dbeafe").opacity(0.5))
+                )
                 
                 // Down
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Down")
-                        .font(.headline)
-                        .foregroundColor(Color(hex: "#4A90E2"))
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Image(systemName: "arrow.down")
+                            .foregroundColor(Color(hex: "#10b981"))
+                        Text("Down")
+                            .font(.headline)
+                            .foregroundColor(Color(hex: "#10b981"))
+                    }
+                    
                     ForEach(down, id: \.self) { clue in
-                        Text(clue)
-                            .font(.caption)
-                            .foregroundColor(.black)
-                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(alignment: .top, spacing: 6) {
+                            Text("•")
+                                .foregroundColor(Color(hex: "#10b981"))
+                            Text(clue)
+                                .font(.subheadline)
+                                .foregroundColor(.black)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(hex: "#d1fae5").opacity(0.5))
+                )
             }
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 16)
                 .fill(Color.white)
-                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         )
         .padding(.horizontal)
     }
 }
+
+// MARK: - Keyboard View
 struct KeyboardView: View {
     let onLetterTapped: (String) -> Void
     let onDeleteTapped: () -> Void
     let rows = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"]
     
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             ForEach(0..<rows.count, id: \.self) { i in
-                HStack(spacing: 6) {
+                HStack(spacing: 5) {
                     if i == 2 { Spacer() }
                     ForEach(Array(rows[i]), id: \.self) { char in
                         Button(action: { onLetterTapped(String(char)) }) {
                             Text(String(char))
-                                .font(.headline)
+                                .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.black)
-                                .frame(width: 32, height: 44)
+                                .frame(width: 34, height: 46)
                                 .background(Color.white)
-                                .cornerRadius(4)
-                                .shadow(color: .black.opacity(0.15), radius: 1, y: 1)
+                                .cornerRadius(6)
+                                .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
                         }
                     }
                     if i == 2 {
                         Button(action: onDeleteTapped) {
-                            Image(systemName: "delete.left")
-                                .foregroundColor(.red)
-                                .frame(width: 42, height: 44)
-                                .background(Color.white)
-                                .cornerRadius(4)
-                                .shadow(color: .black.opacity(0.15), radius: 1, y: 1)
+                            Image(systemName: "delete.left.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(.white)
+                                .frame(width: 50, height: 46)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color(hex: "#ef4444"),
+                                            Color(hex: "#dc2626")
+                                        ]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(6)
+                                .shadow(color: Color(hex: "#ef4444").opacity(0.4), radius: 3, y: 2)
                         }
                         Spacer()
                     }
                 }
             }
         }
+        .padding(.horizontal)
     }
 }
+
 #Preview {
     ReceiverCrosswordGameView()
 }

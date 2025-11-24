@@ -105,15 +105,15 @@ struct ReceiverGamesView: View {
             .background(Color(.systemGray6).ignoresSafeArea())
         }
         // Sheet for Sudoku
-        .sheet(isPresented: $isShowingSudoku) {
+        .fullScreenCover(isPresented: $isShowingSudoku) {
             ReceiverSudokuGameView()
         }
         // Sheet for Memory Game
-        .sheet(isPresented: $isShowingMemory) {
+        .fullScreenCover(isPresented: $isShowingMemory) {
             ReceiverMemoryGameView()
         }
         // Sheet for Crossword Game (BARU DITAMBAHKAN)
-        .sheet(isPresented: $isShowingCrossword) {
+        .fullScreenCover(isPresented: $isShowingCrossword) {
             ReceiverCrosswordGameView()
         }
     }
