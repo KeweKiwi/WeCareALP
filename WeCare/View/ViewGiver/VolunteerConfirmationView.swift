@@ -4,25 +4,45 @@
 //
 //  Created by student on 19/11/25.
 //
+
 import SwiftUI
 
 struct VolunteerConfirmationView: View {
     @StateObject var viewModel: VolunteerConfirmationVM
+    @State private var showCompletionSheet: Bool = false
+    @State private var goToPersonList: Bool = false      // Navigate ke GiverPersonListView
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack {
             if !viewModel.isAccepted {
-                // STATE: WAITING FOR ACCEPTANCE
                 waitingView
             } else {
-                // STATE: ACCEPTED → APPROVED + CHAT + CALL / VIDEO
                 approvedView
             }
         }
-        .padding(.top)
         .background(Color(.systemGray6).ignoresSafeArea())
         .navigationTitle("Volunteer Status")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showCompletionSheet) {
+            VolunteerCompletionTipView(
+                volunteer: viewModel.volunteer,
+                isPresented: $showCompletionSheet,
+                onSubmit: { tip in
+                    viewModel.completeTask(withTip: tip)
+                }
+            )
+        }
+        // 🔒 Hidden NavigationLink → pindah ke GiverPersonListView TANPA numpuk layer baru
+        .background(
+            NavigationLink(
+                destination: GiverPersonListView()
+                    .navigationBarBackButtonHidden(true)          // ⬅️ hilangin tombol back
+                    .toolbar(.hidden, for: .navigationBar),
+                isActive: $goToPersonList
+            ) {
+                EmptyView()
+            }
+        )
     }
     
     // MARK: - Waiting View
@@ -61,85 +81,171 @@ struct VolunteerConfirmationView: View {
         }
     }
     
-    // MARK: - Approved View (Chat + Call)
+    // MARK: - Approved View
     private var approvedView: some View {
-        VStack(spacing: 16) {
-            // Centang Approved
-            VStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color(hex: "#a6d17d").opacity(0.2))
-                        .frame(width: 120, height: 120)
-                    Circle()
-                        .fill(Color(hex: "#a6d17d"))
-                        .frame(width: 90, height: 90)
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                Text("Request Approved")
-                    .font(.title2.bold())
-                    .foregroundColor(Color(hex: "#387b38"))
-                
-                Text("\(viewModel.volunteer.name) is ready to help.")
+        VStack(spacing: 8) {
+            // 🔝 HEADER: Call & Video Call – tetap di atas
+            VStack(spacing: 8) {
+                Text("Volunteer: \(viewModel.volunteer.name)")
                     .font(.subheadline)
                     .foregroundColor(.gray)
-            }
-            .padding(.top)
-            
-            // Tombol Call & Video Call
-            HStack(spacing: 16) {
-                Button(action: {
-                    // TODO: integrate phone call
-                }) {
-                    HStack {
-                        Image(systemName: "phone.fill")
-                        Text("Call")
-                    }
-                    .font(.headline)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color(hex: "#91bef8"))
-                    .foregroundColor(.black)
-                    .cornerRadius(15)
-                }
-                
-                Button(action: {
-                    // TODO: integrate video call
-                }) {
-                    HStack {
-                        Image(systemName: "video.fill")
-                        Text("Video Call")
-                    }
-                    .font(.headline)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color(hex: "#fa6255"))
-                    .foregroundColor(.white)
-                    .cornerRadius(15)
-                }
-            }
-            .padding(.horizontal)
-            
-            // Chat title
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Chat with \(viewModel.volunteer.name)")
-                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal)
                 
-                // Messages list
-                ScrollView {
-                    VStack(spacing: 10) {
-                        ForEach(viewModel.messages) { message in
-                            ChatBubble(message: message)
+                HStack(spacing: 16) {
+                    NavigationLink(
+                        destination: VolunteerCallView(volunteer: viewModel.volunteer)
+                    ) {
+                        HStack {
+                            Image(systemName: "phone.fill")
+                            Text("Call")
                         }
+                        .font(.headline)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color(hex: "#91bef8"))
+                        .foregroundColor(.black)
+                        .cornerRadius(15)
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 4)
+                    
+                    NavigationLink(
+                        destination: VolunteerVideoCallView(volunteer: viewModel.volunteer)
+                    ) {
+                        HStack {
+                            Image(systemName: "video.fill")
+                            Text("Video Call")
+                        }
+                        .font(.headline)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color(hex: "#fa6255"))
+                        .foregroundColor(.white)
+                        .cornerRadius(15)
+                    }
                 }
+                .padding(.horizontal)
+            }
+            .padding(.top, 8)
+            
+            Divider()
+            
+            // 🧾 SCROLL AREA: centang + chat + status tugas
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Centang Approved – ikut scroll ke atas
+                    VStack(spacing: 10) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(hex: "#a6d17d").opacity(0.2))
+                                .frame(width: 100, height: 100)
+                            Circle()
+                                .fill(Color(hex: "#a6d17d"))
+                                .frame(width: 75, height: 75)
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 34, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        Text("Request Approved")
+                            .font(.title3.bold())
+                            .foregroundColor(Color(hex: "#387b38"))
+                        
+                        Text("\(viewModel.volunteer.name) is ready to help.")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    }
+                    .padding(.top, 8)
+                    
+                    // Chat title + messages
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Chat with \(viewModel.volunteer.name)")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        VStack(spacing: 10) {
+                            ForEach(viewModel.messages) { message in
+                                ChatBubble(message: message)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 4)
+                    }
+                    
+                    // Task completion & tip section
+                    if !viewModel.isTaskCompleted {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Task Status")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            Text("Has the volunteer finished the task? You can mark it as done and send an optional tip.")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                                .padding(.horizontal)
+                            
+                            Button(action: {
+                                showCompletionSheet = true
+                            }) {
+                                Text("Mark as Done & Give Tip")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color(hex: "#fdcb46"))
+                                    .foregroundColor(.black)
+                                    .cornerRadius(15)
+                                    .shadow(radius: 3)
+                            }
+                            .padding(.horizontal)
+                            .padding(.bottom, 8)
+                        }
+                        .padding(.top, 8)
+                    } else {
+                        // ✅ Task Completed + tombol kecil ke GiverPersonListView
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(alignment: .top, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Task Completed 🎉")
+                                        .font(.headline)
+                                        .foregroundColor(Color(hex: "#387b38"))
+                                    
+                                    if let tip = viewModel.givenTipAmount, !tip.isEmpty {
+                                        Text("Tip sent: Rp \(tip)")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    } else {
+                                        Text("No tip was given.")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    // ⬅️ trigger NavigationLink ke GiverPersonListView
+                                    goToPersonList = true
+                                }) {
+                                    Image(systemName: "person.2.crop.square.stack.fill")
+                                        .font(.title3)
+                                        .foregroundColor(Color(hex: "#387b38"))
+                                        .padding(6)
+                                        .background(Color(hex: "#e1c7ec").opacity(0.4))
+                                        .cornerRadius(10)
+                                }
+                            }
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.white)
+                        .cornerRadius(15)
+                        .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 2)
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                    }
+                }
+                .padding(.bottom, 8)
             }
             
-            // Message input
+            // 💬 Message input bar
             HStack(spacing: 10) {
                 TextField("Type a message...", text: $viewModel.newMessage)
                     .padding(10)
@@ -163,14 +269,12 @@ struct VolunteerConfirmationView: View {
 }
 
 // MARK: - Chat Bubble View
-
 struct ChatBubble: View {
     let message: ChatMessage
     
     var body: some View {
         HStack {
             if message.isFromVolunteer {
-                // Volunteer di kiri
                 VStack(alignment: .leading, spacing: 4) {
                     Text(message.text)
                         .padding(10)
@@ -184,7 +288,6 @@ struct ChatBubble: View {
                 
                 Spacer(minLength: 30)
             } else {
-                // Caregiver di kanan
                 Spacer(minLength: 30)
                 
                 VStack(alignment: .trailing, spacing: 4) {
@@ -202,18 +305,4 @@ struct ChatBubble: View {
     }
 }
 
-// MARK: - Preview (opsional)
 
-//#Preview {
-//    let dummyVolunteer = Volunteer(
-//        name: "Alice Johnson",
-//        rating: 4.8,
-//        distance: "1.2 km",
-//        age: 28,
-//        gender: "Female",
-//        specialty: "Elderly Care, Medicine Reminder",
-//        restrictions: "No heavy lifting",
-//        coordinate: .init(latitude: -6.2, longitude: 106.8)
-//    )
-//    VolunteerConfirmationView(viewModel: VolunteerConfirmationVM(volunteer: dummyVolunteer))
-//}
