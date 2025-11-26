@@ -11,8 +11,13 @@ import Combine
 final class VolunteerConfirmationVM: ObservableObject {
     @Published var volunteer: Volunteer
     @Published var isAccepted: Bool = false
+    
     @Published var messages: [ChatMessage]
     @Published var newMessage: String = ""
+    
+    // NEW: Task completion & tip
+    @Published var isTaskCompleted: Bool = false
+    @Published var givenTipAmount: String? = nil   // nil = tidak ada tip
     
     init(volunteer: Volunteer) {
         self.volunteer = volunteer
@@ -46,11 +51,26 @@ final class VolunteerConfirmationVM: ObservableObject {
             id: UUID(),
             text: trimmed,
             isFromVolunteer: false,
-            time: "Now"
+            time: Self.currentTimeString()
         )
         
         messages.append(message)
         newMessage = ""
     }
+    
+    /// Dipanggil setelah caregiver menandai tugas selesai dan (opsional) memberi tip
+    func completeTask(withTip tip: String?) {
+        isTaskCompleted = true
+        givenTipAmount = tip
+    }
+    
+    // MARK: - Helpers
+    
+    private static func currentTimeString() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: Date())
+    }
 }
+
 
