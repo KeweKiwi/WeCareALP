@@ -1,23 +1,19 @@
 import SwiftUI
+
 struct GiverFamilyDetailView: View {
     let person: GiverPersonCardViewData
     
     @State private var isCodeHidden: Bool = true
-    @State private var isEditing: Bool = false
-    @State private var members: [String]
     
     init(person: GiverPersonCardViewData) {
         self.person = person
-        _members = State(initialValue: person.familyMembers ?? [])
     }
     
     private var displayFamilyCode: String {
-        // pastikan di data: familyCode = "123456" (6 digit angka, tanpa FAM-)
         guard let code = person.familyCode, !code.isEmpty else {
             return "No family code"
         }
         if isCodeHidden {
-            // selalu 6 bullet, biar kaya saldo
             return String(repeating: "•", count: 6)
         }
         return code
@@ -25,130 +21,175 @@ struct GiverFamilyDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 
-                // Header
-                HStack(spacing: 12) {
-                    GiverAvatarView(url: person.avatarURL, size: 50)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(person.name)
-                            .font(.title3)
-                            .bold()
-                        Text(person.role)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                }
-                .padding(.bottom, 4)
-                
-                // Kartu Family Code
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Family Code")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    HStack {
-                        Text(displayFamilyCode)
-                            .font(.title3)
-                            .monospacedDigit()
-                        Spacer()
-                        Button {
-                            isCodeHidden.toggle()
-                        } label: {
-                            Image(systemName: isCodeHidden ? "eye.slash.fill" : "eye.fill")
-                                .foregroundColor(.blue)
+                // Header Card
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 14) {
+                        GiverAvatarView(url: person.avatarURL, size: 60)
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(person.name)
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            
+                            Text(person.role)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                         }
+                        
+                        Spacer()
                     }
-                }
-                .padding(14)
-                .background(Color(.systemBackground))
-                .cornerRadius(14)
-                .shadow(color: Color.black.opacity(0.06), radius: 4, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color(.systemGray4), lineWidth: 1)
-                )
-                
-                // Kartu Family Members
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Family Members")
-                        .font(.headline)
                     
-                    if members.isEmpty {
-                        Text("No family member data.")
-                            .font(.subheadline)
+                    // Family Code Section
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Family Code")
+                            .font(.caption)
                             .foregroundColor(.secondary)
-                            .padding(.top, 4)
-                    } else {
-                        VStack(spacing: 8) {
-                            ForEach(Array(members.enumerated()), id: \.offset) { index, member in
-                                HStack(spacing: 12) {
-                                    // inisial bulat kecil kaya avatar mini
-                                    let initial = member.first.map { String($0).uppercased() } ?? "?"
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color(.systemGray5))
-                                        Text(initial)
-                                            .font(.subheadline)
-                                            .foregroundColor(.primary)
-                                    }
-                                    .frame(width: 32, height: 32)
-                                    
-                                    Text(member)
-                                        .font(.subheadline)
-                                    
-                                    Spacer()
-                                    
-                                    if isEditing {
-                                        Button {
-                                            members.remove(at: index)
-                                        } label: {
-                                            Image(systemName: "trash")
-                                                .foregroundColor(.red)
-                                        }
-                                    }
+                            .textCase(.uppercase)
+                            .tracking(0.5)
+                        
+                        HStack {
+                            Text(displayFamilyCode)
+                                .font(.system(size: 22, weight: .medium, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isCodeHidden.toggle()
                                 }
-                                .padding(10)
-                                .background(Color(.systemBackground))
-                                .cornerRadius(10)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color(.systemGray4), lineWidth: 0.8)
-                                )
+                            } label: {
+                                Image(systemName: isCodeHidden ? "eye.slash.fill" : "eye.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.blue)
+                                    .frame(width: 40, height: 40)
+                                    .background(Color.blue.opacity(0.1))
+                                    .clipShape(Circle())
                             }
                         }
                     }
+                    .padding(16)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
                 }
-                .padding(14)
-                .background(Color(.secondarySystemBackground))
-                .cornerRadius(14)
+                .padding(20)
+                .background(Color(.systemBackground))
+                .cornerRadius(20)
+                .shadow(color: Color.black.opacity(0.05), radius: 10, y: 4)
                 
-                Spacer(minLength: 0)
+                // Family Members Section
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Text("Family Members")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        Text("\(person.familyMembers?.count ?? 0)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(.systemGray5))
+                            .clipShape(Capsule())
+                    }
+                    
+                    if let members = person.familyMembers, !members.isEmpty {
+                        VStack(spacing: 10) {
+                            ForEach(Array(members.enumerated()), id: \.offset) { index, member in
+                                MemberRowView(
+                                    name: member,
+                                    isAdmin: index == 0 // Contoh: member pertama adalah admin
+                                )
+                            }
+                        }
+                    } else {
+                        VStack(spacing: 8) {
+                            Image(systemName: "person.2.slash")
+                                .font(.system(size: 40))
+                                .foregroundColor(.secondary.opacity(0.5))
+                            
+                            Text("No family members yet")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    }
+                }
+                .padding(20)
+                .background(Color(.systemBackground))
+                .cornerRadius(20)
+                .shadow(color: Color.black.opacity(0.05), radius: 10, y: 4)
+                
+                Spacer(minLength: 20)
             }
             .padding()
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("Family")
+        .navigationTitle("Family Details")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 12) {
-                    Button {
-                        // dummy tambah member baru, nanti bisa diganti jadi form
-                        members.append("New member")
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    Button {
-                        isEditing.toggle()
-                    } label: {
-                        Text(isEditing ? "Done" : "Edit")
-                    }
-                }
-            }
-        }
     }
 }
 
-
+// MARK: - Member Row View
+struct MemberRowView: View {
+    let name: String
+    let isAdmin: Bool
+    
+    private var initial: String {
+        name.first.map { String($0).uppercased() } ?? "?"
+    }
+    
+    private var avatarColor: Color {
+        let colors: [Color] = [.blue, .purple, .pink, .orange, .green, .red]
+        let index = abs(name.hashValue) % colors.count
+        return colors[index]
+    }
+    
+    var body: some View {
+        HStack(spacing: 14) {
+            // Avatar dengan warna solid
+            ZStack {
+                Circle()
+                    .fill(avatarColor.opacity(0.15))
+                
+                Text(initial)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(avatarColor)
+            }
+            .frame(width: 44, height: 44)
+            
+            // Name
+            Text(name)
+                .font(.body)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            // Admin Badge
+            if isAdmin {
+                Text("Admin")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.blue)
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(14)
+        .background(Color(.systemGray6).opacity(0.5))
+        .cornerRadius(14)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color(.systemGray4).opacity(0.5), lineWidth: 0.5)
+        )
+    }
+}
