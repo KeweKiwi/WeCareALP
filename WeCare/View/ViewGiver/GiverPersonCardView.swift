@@ -81,6 +81,7 @@ struct GiverPersonCardView: View {
     let data: GiverPersonCardViewData
     let onInfo: () -> Void
     let onLocation: () -> Void
+    let onVolunteer: () -> Void
     let onCardTap: () -> Void
     
     var body: some View {
@@ -121,8 +122,8 @@ struct GiverPersonCardView: View {
             }
             
             HStack {
-                Button(action: onInfo) {
-                    Text("Info")
+                Button(action: onVolunteer) {
+                    Text("Find Volunteer")
                         .font(.subheadline)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
