@@ -1,11 +1,11 @@
 //
-//  VolunteerCard.swift
+//  VolunteerCardView.swift
 //  WeCare
 //
 //  Created by student on 19/11/25.
 //
 import SwiftUI
-struct VolunteerCard: View {
+struct VolunteerCardView: View {
     let volunteer: Volunteer
     var body: some View {
         HStack {
@@ -40,6 +40,6 @@ struct VolunteerCard: View {
     }
 }
 //#Preview {
-//    VolunteerCard()
+//    VolunteerCardView()
 //}
 
