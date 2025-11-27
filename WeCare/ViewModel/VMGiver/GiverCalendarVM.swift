@@ -29,6 +29,8 @@ final class GiverCalendarVM: ObservableObject {
     @Published var newAgendaStatus: UrgencyStatus = .low
     @Published var newAgendaTimeDate = Date()
     @Published var newAgendaType: AgendaType = .activity
+    @Published var selectedMedicine: Medicines? = nil
+    @Published var newAgendaMedicine: Medicines? = nil
 
     // DETAIL
     @Published var selectedAgenda: AgendaItem? = nil
@@ -194,20 +196,27 @@ final class GiverCalendarVM: ObservableObject {
         let finalTitle: String =
             newAgendaType == .medicine ? "💊 \(newAgendaTitle)" : newAgendaTitle
 
+        let dateKey = dateKey(from: selectedDate)
+
         let newItem = AgendaItem(
+            id: UUID().uuidString,
             title: finalTitle,
             description: newAgendaDescription,
             time: timeString,
+            date: dateKey,
             status: newAgendaStatus,
-            owner: owner.fullName
+            type: newAgendaType,
+            ownerId: owner.id,              // Firestore user doc ID
+            ownerName: owner.fullName,
+            medicineId: selectedMedicine?.medicineId,
+            medicineName: selectedMedicine?.medicineName,
+            medicineImage: selectedMedicine?.medicineImage
         )
 
-        let key = dateKey(from: selectedDate)
-
         var ownerAgenda = agendaData[owner.fullName] ?? [:]
-        var dayList = ownerAgenda[key] ?? []
+        var dayList = ownerAgenda[dateKey] ?? []
         dayList.append(newItem)
-        ownerAgenda[key] = dayList
+        ownerAgenda[dateKey] = dayList
         agendaData[owner.fullName] = ownerAgenda
 
         resetNewAgendaFields()
@@ -234,7 +243,7 @@ final class GiverCalendarVM: ObservableObject {
         editAgendaTimeDate = f.date(from: agenda.time) ?? Date()
 
         editAgendaStatus = agenda.status
-        editAgendaOwner = persons.first { $0.fullName == agenda.owner }
+        editAgendaOwner = persons.first { $0.fullName == agenda.ownerName }
 
         // Attempt detect type
         editAgendaType = agenda.title.starts(with: "💊") ? .medicine : .activity
@@ -257,8 +266,14 @@ final class GiverCalendarVM: ObservableObject {
             title: editAgendaType == .medicine ? "💊 \(editAgendaTitle)" : editAgendaTitle,
             description: editAgendaDescription,
             time: timeString,
+            date: key,
             status: editAgendaStatus,
-            owner: owner.fullName
+            type: editAgendaType,
+            ownerId: owner.id,
+            ownerName: owner.fullName,
+            medicineId: selectedMedicine?.medicineId,
+            medicineName: selectedMedicine?.medicineName,
+            medicineImage: selectedMedicine?.medicineImage
         )
 
         // Remove old agenda
@@ -318,4 +333,11 @@ final class GiverCalendarVM: ObservableObject {
         comps.day = day
         return dateKey(from: Calendar.current.date(from: comps) ?? base)
     }
+    
+    func dateForDay(_ day: Int) -> Date {
+        var comps = Calendar.current.dateComponents([.year, .month], from: currentDate)
+        comps.day = day
+        return Calendar.current.date(from: comps) ?? currentDate
+    }
+
 }
