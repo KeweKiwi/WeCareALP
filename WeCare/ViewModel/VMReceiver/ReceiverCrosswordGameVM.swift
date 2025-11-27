@@ -1,8 +1,8 @@
-import Foundation
 import SwiftUI
+import Foundation
 import Combine
-class CrosswordViewModel: ObservableObject {
-    // Grid 10x10
+
+class ReceiverCrosswordViewModel: ObservableObject {
     let numRows = 10
     let numCols = 10
     
@@ -10,8 +10,6 @@ class CrosswordViewModel: ObservableObject {
     @Published var selectedCellID: UUID?
     @Published var isPuzzleSolved: Bool = false
     @Published var gameStatus: String = "General Knowledge"
-    
-    // --- DAFTAR PETUNJUK (GENERAL THEME - 10 KATA) ---
     
     let cluesAcross = [
         "1. Sheets in a book (5)",          // PAGES
@@ -34,7 +32,6 @@ class CrosswordViewModel: ObservableObject {
     }
     
     func createPuzzle() {
-        // 1. Inisialisasi grid kosong
         var newGrid = [[CrosswordCell]](
             repeating: [CrosswordCell](
                 repeating: .init(row: 0, col: 0, answer: ""),
@@ -43,49 +40,24 @@ class CrosswordViewModel: ObservableObject {
             count: numRows
         )
         
-        // 2. SETUP KATA (LAYOUT 10 Kata)
-        
-        // --- ACROSS ---
-        // 1. PAGES (0,0)
         addWord(row: 0, col: 0, word: "PAGES", clue: 1, isAcross: true, to: &newGrid)
-        
-        // 4. WATER (2,2)
         addWord(row: 2, col: 2, word: "WATER", clue: 4, isAcross: true, to: &newGrid)
-        
-        // 5. NIGHT (4,0)
         addWord(row: 4, col: 0, word: "NIGHT", clue: 5, isAcross: true, to: &newGrid)
-        
-        // 7. SPACE (6,2)
         addWord(row: 6, col: 2, word: "SPACE", clue: 7, isAcross: true, to: &newGrid)
-        
-        // 9. BREAD (8,4)
         addWord(row: 8, col: 4, word: "BREAD", clue: 9, isAcross: true, to: &newGrid)
         
-        
-        // --- DOWN ---
-        // 1. PAINT (0,0) - Intersects PAGES(P) & NIGHT(T)
         addWord(row: 0, col: 0, word: "PAINT", clue: 1, isAcross: false, to: &newGrid)
-        
-        // 2. ENTRY (0,3) - Intersects PAGES(E) & WATER(T)
         addWord(row: 0, col: 3, word: "ENTRY", clue: 2, isAcross: false, to: &newGrid)
-        
-        // 3. HAPPY (4,3) - Intersects NIGHT(H) & SPACE(P)
         addWord(row: 4, col: 3, word: "HAPPY", clue: 3, isAcross: false, to: &newGrid)
-        
-        // 6. OCEAN (6,6) - Intersects SPACE(E) & BREAD(E)
         addWord(row: 6, col: 6, word: "OCEAN", clue: 6, isAcross: false, to: &newGrid)
-        
-        // 8. DREAM (8,8) - Intersects BREAD(D)?? No BREAD is B R E A D. Last is D.
-        // Bread starts (8,4). (8,4)B, (8,5)R, (8,6)E, (8,7)A, (8,8)D.
-        // So DREAM intersects BREAD at D.
         addWord(row: 8, col: 8, word: "DREAM", clue: 8, isAcross: false, to: &newGrid)
-        self.grid = newGrid
-        self.isPuzzleSolved = false
-        self.selectedCellID = nil
-        self.gameStatus = "General Knowledge"
+        
+        grid = newGrid
+        isPuzzleSolved = false
+        selectedCellID = nil
+        gameStatus = "General Knowledge"
     }
     
-    // Helper function
     private func addWord(row: Int, col: Int, word: String, clue: Int, isAcross: Bool, to grid: inout [[CrosswordCell]]) {
         let chars = Array(word.uppercased())
         for (i, char) in chars.enumerated() {
@@ -100,34 +72,19 @@ class CrosswordViewModel: ObservableObject {
                     row: r,
                     col: c,
                     clueNumber: numberToSet,
-                    answer: String(char)
+                    answer: String(char),
+                    input: existingCell.input,
+                    isCorrect: existingCell.isCorrect,
+                    isBlocked: false
                 )
             }
         }
     }
     
-    // --- LOGIC ---
     func selectCell(_ cell: CrosswordCell) {
-        if !cell.isBlocked { selectedCellID = cell.id }
-    }
-    
-    func inputLetter(_ letter: String) {
-        guard let selectedID = selectedCellID,
-              let (r, c) = findCellCoordinates(for: selectedID) else { return }
-        grid[r][c].input = letter.uppercased()
-    }
-    
-    func deleteLetter() {
-        guard let selectedID = selectedCellID,
-              let (r, c) = findCellCoordinates(for: selectedID) else { return }
-        grid[r][c].input = ""
-    }
-    
-    private func findCellCoordinates(for id: UUID) -> (Int, Int)? {
-        for r in 0..<numRows {
-            if let c = grid[r].firstIndex(where: { $0.id == id }) { return (r, c) }
+        if !cell.isBlocked {
+            selectedCellID = cell.id
         }
-        return nil
     }
     
     func checkAnswers() {
@@ -158,3 +115,4 @@ class CrosswordViewModel: ObservableObject {
         }
     }
 }
+
