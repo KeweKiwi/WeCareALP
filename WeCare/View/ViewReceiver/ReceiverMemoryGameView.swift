@@ -14,19 +14,19 @@ struct ReceiverMemoryGameView: View {
     }
     
     private var cardSpacing: CGFloat {
-        selectedDifficulty == .hard ? 10 : 12
+        selectedDifficulty == .hard ? 8 : 12
     }
     
     var body: some View {
         ZStack {
             Color.white.ignoresSafeArea()
             
-            VStack(spacing: selectedDifficulty == .easy ? 16 : 12) {
+            VStack(spacing: selectedDifficulty == .hard ? 8 : 12) {
                 header
                 statsRow
                 difficultyPicker
                 gameBoard
-                Spacer(minLength: 8)
+                Spacer(minLength: 4)
                 restartButton
             }
             .padding(.top, 8)
@@ -43,6 +43,16 @@ struct ReceiverMemoryGameView: View {
 extension ReceiverMemoryGameView {
     private var header: some View {
         HStack {
+            Color.clear.frame(width: 90)
+            
+            Spacer()
+            
+            Text("Memory Game")
+                .font(.system(size: 20, weight: .black))
+                .foregroundColor(Color(hex: "#f67c5f"))
+            
+            Spacer()
+            
             Button { dismiss() } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "xmark")
@@ -56,15 +66,6 @@ extension ReceiverMemoryGameView {
                 .background(Color(hex: "#f67c5f"))
                 .cornerRadius(12)
             }
-            
-            Spacer()
-            
-            Text("Memory Game")
-                .font(.system(size: 26, weight: .black))
-                .foregroundColor(Color(hex: "#f67c5f"))
-            
-            Spacer()
-            Color.clear.frame(width: 90)
         }
         .padding(.horizontal, 24)
     }
@@ -74,36 +75,38 @@ extension ReceiverMemoryGameView {
 extension ReceiverMemoryGameView {
     private var statsRow: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: selectedDifficulty == .hard ? 2 : 4) {
                 Text("MOVES")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: selectedDifficulty == .hard ? 10 : 12, weight: .bold))
                     .foregroundColor(Color(hex: "#f67c5f"))
                     .tracking(1)
                 
                 Text("\(game.moves)")
-                    .font(.system(size: 32, weight: .black))
+                    .font(.system(size: selectedDifficulty == .hard ? 20 : 32, weight: .black))
                     .foregroundColor(Color(hex: "#f67c5f"))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
+            .frame(minHeight: selectedDifficulty == .hard ? 50 : 80)
+            .padding(selectedDifficulty == .hard ? 10 : 16)
             .background(Color(hex: "#fff9e6"))
             .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.08), radius: 8, y: 2)
             
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: selectedDifficulty == .hard ? 2 : 4) {
                 Text("STATUS")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: selectedDifficulty == .hard ? 10 : 12, weight: .bold))
                     .foregroundColor(Color(hex: "#f67c5f"))
                     .tracking(1)
                 
                 Text(game.gameStatus)
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: selectedDifficulty == .hard ? 12 : 16, weight: .bold))
                     .foregroundColor(game.isGameOver ? Color(hex: "#edcf72") : Color(hex: "#776e65"))
                     .multilineTextAlignment(.trailing)
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(16)
+            .frame(minHeight: selectedDifficulty == .hard ? 50 : 80)
+            .padding(selectedDifficulty == .hard ? 10 : 16)
             .background(Color(hex: "#fff9e6"))
             .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.08), radius: 8, y: 2)
@@ -137,7 +140,7 @@ extension ReceiverMemoryGameView {
         return LazyVGrid(columns: gridColumns, spacing: cardSpacing) {
             ForEach(game.cards) { card in
                 ZStack {
-                    CardView(card: card)
+                    CardView(card: card, isHardMode: selectedDifficulty == .hard)
                         .aspectRatio(2/3, contentMode: .fit)
                         .onTapGesture {
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
@@ -151,7 +154,7 @@ extension ReceiverMemoryGameView {
                 }
             }
         }
-        .padding(selectedDifficulty == .medium ? 18 : 20)
+        .padding(selectedDifficulty == .hard ? 12 : (selectedDifficulty == .medium ? 18 : 20))
         .background(Color(hex: "#fff9e6"))
         .cornerRadius(20)
         .shadow(color: Color.black.opacity(0.1), radius: 12, y: 4)
@@ -167,13 +170,13 @@ extension ReceiverMemoryGameView {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: selectedDifficulty == .hard ? 16 : 18, weight: .bold))
                 Text("Restart Game")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: selectedDifficulty == .hard ? 16 : 18, weight: .bold))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, selectedDifficulty == .hard ? 12 : 16)
             .background(Color(hex: "#f67c5f"))
             .cornerRadius(16)
             .shadow(color: Color(hex: "#f67c5f").opacity(0.4), radius: 8, y: 4)
@@ -186,27 +189,28 @@ extension ReceiverMemoryGameView {
 
 struct CardView: View {
     let card: MemoryCard
+    let isHardMode: Bool
     
     var rotation: Double { (card.isFaceUp || card.isMatched) ? 180 : 0 }
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: isHardMode ? 10 : 14)
                 .fill(Color.white)
                 .overlay(
                     Text(card.content)
-                        .font(.system(size: 42))
+                        .font(.system(size: isHardMode ? 32 : 42))
                         .opacity(card.isMatched ? 0.6 : 1)
                         .scaleEffect(card.isMatched ? 1.15 : 1)
                         .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
                 )
                 .opacity((card.isFaceUp || card.isMatched) ? 1 : 0)
             
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: isHardMode ? 10 : 14)
                 .fill(Color(hex: "#edc53f"))
                 .overlay(
                     Image(systemName: "questionmark")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: isHardMode ? 22 : 28, weight: .bold))
                         .foregroundColor(.white)
                 )
                 .opacity((card.isFaceUp || card.isMatched) ? 0 : 1)
@@ -250,9 +254,3 @@ struct GoldSparklesView: View {
 #Preview {
     ReceiverMemoryGameView()
 }
-
-
-
-
-
-

@@ -1,62 +1,121 @@
-import Combine
 import Foundation
+import FirebaseFirestore
 import SwiftUI
-// MARK: - ViewModel
+import Combine
+
+@MainActor
 class ReceiverVM: ObservableObject {
+    // MARK: - Data Models
+    @Published var tasks: [Tasks] = []
     
-    // Vital Health Data (Diperbarui untuk Apple Watch)
-    @Published var heartRate: Int = 78
-    @Published var oxygenSaturation: Double = 98.5
-    @Published var steps: Int = 5230
-    @Published var wristTemperature: Double = 36.8 // Dalam Celsius
-    @Published var sleepDuration: Double = 7.2 // Dalam Jam
+    // MARK: - User Profile
+    @Published var currentUserName: String = "Loading..."
     
-    // --- Properti Tekanan Darah Dihapus ---
-    // @Published var systolicPressure: Int = 125
-    // @Published var diastolicPressure: Int = 80
+    // MARK: - Health Vitals (Used by Dashboard AND Health View)
+    @Published var steps: Int = 0
+    @Published var heartRate: Int = 0
+    @Published var wristTemperature: Double = 0.0
+    @Published var sleepDuration: Double = 0.0
+    @Published var oxygenSaturation: Double = 98.0 // Default static value
     
-    // Daily Task / Reminder Data
-    @Published var tasks: [TaskItem] = [
-        TaskItem(time: "07:00", title: "Take Morning Medicine", isCompleted: false),
-        TaskItem(time: "09:00", title: "Morning Walk (10 mins)", isCompleted: false),
-        TaskItem(time: "13:00", title: "Take Noon Medicine", isCompleted: false),
-        TaskItem(time: "19:00", title: "Take Evening Medicine", isCompleted: false)
-    ]
+    private let db = Firestore.firestore()
     
-    // Computed Property: Task Completion Percentage
+    // Computed property for Task Progress
     var taskCompletionPercentage: Int {
-        let completedCount = tasks.filter { $0.isCompleted }.count
-        let totalCount = tasks.count
-        return totalCount > 0 ? (completedCount * 100) / totalCount : 0
+        guard !tasks.isEmpty else { return 0 }
+        let completed = tasks.filter { $0.isCompleted }.count
+        return Int((Double(completed) / Double(tasks.count)) * 100)
+    }
+
+    // MARK: - 1. Fetch User Profile (Name)
+    func fetchUserProfile(userId: Int) {
+        db.collection("Users")
+            .whereField("user_id", isEqualTo: userId)
+            .limit(to: 1)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                guard let doc = snapshot?.documents.first else {
+                    self.currentUserName = "Unknown User"
+                    return
+                }
+                self.currentUserName = doc.data()["full_name"] as? String ?? "User"
+            }
+    }
+
+    // MARK: - 2. Fetch Tasks
+    func fetchTasks(forReceiverId userId: Int) {
+        db.collection("Tasks")
+            .whereField("careReceiver_id", isEqualTo: userId)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                if let error = error { print("Error fetching tasks: \(error)"); return }
+                guard let documents = snapshot?.documents else { return }
+                
+                self.tasks = documents.map { doc in
+                    Tasks(id: doc.documentID, data: doc.data())
+                }
+                .sorted { ($0.dueTime ?? Date()) < ($1.dueTime ?? Date()) }
+            }
     }
     
-    // --- bloodPressureStatus Dihapus ---
-    // var bloodPressureStatus: (String, Color) { ... }
-    
-    // BARU: Computed Property untuk Kualitas Tidur
-    var sleepStatus: (String, Color) {
-        if sleepDuration >= 7.0 {
-            return ("Good", Color(hex: "#a6d17d"))
-        } else if sleepDuration >= 6.0 {
-            return ("Okay", Color(hex: "#fdcb46"))
-        } else {
-            return ("Poor", Color(hex: "#fa6255"))
-        }
+    // MARK: - 3. Fetch All Vitals (Steps, HR, Temp, etc.)
+    // This powers BOTH the Dashboard (steps) and Health View (everything else)
+    func fetchLatestVitals(forUserId userId: Int) {
+        db.collection("HealthVitals")
+            .whereField("user_id", isEqualTo: userId)
+            .order(by: "timestamp", descending: true)
+            .limit(to: 1)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    print("Error fetching vitals: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let doc = snapshot?.documents.first else {
+                    print("⚠️ No vitals found for user \(userId)")
+                    self.resetVitals()
+                    return
+                }
+                
+                let vital = HealthVitals(id: doc.documentID, data: doc.data())
+                
+                // Assign values to ALL Published properties
+                self.steps = vital.steps
+                self.heartRate = vital.heartRate
+                self.wristTemperature = vital.temperature
+                self.sleepDuration = Double(vital.sleepDurationHours)
+                self.oxygenSaturation = 98.5 // Static default
+                
+                print("✅ Loaded Vitals: Steps=\(self.steps), HR=\(self.heartRate)")
+            }
     }
     
-    // Function: Update Health Data (Simulasi Diperbarui)
+    // MARK: - 4. Fetch Steps (Alias for Dashboard Compatibility)
+    // The Dashboard calls this, so we point it to the main vitals fetcher
+    func fetchLatestSteps(forUserId userId: Int) {
+        fetchLatestVitals(forUserId: userId)
+    }
+    
+    // MARK: - 5. Update Health Data (Missing Function Fixed Here)
     func updateHealthData() {
-        heartRate = Int.random(in: 70...90)
-        oxygenSaturation = Double.random(in: 95.0...100.0)
-        steps = Int.random(in: 3000...8000)
-        wristTemperature = Double.random(in: 36.1...37.2)
-        sleepDuration = Double.random(in: 6.0...8.5)
+        print("🔄 Refreshing Health Data...")
+        // Logic to refresh data or trigger wearable sync would go here
     }
     
-    // Function: Toggle Task Completion
-    func toggleTaskCompletion(for taskID: UUID) {
-        if let index = tasks.firstIndex(where: { $0.id == taskID }) {
-            tasks[index].isCompleted.toggle()
-        }
+    // MARK: - Toggle Task
+    func toggleTaskCompletion(task: Tasks) {
+        db.collection("Tasks").document(task.id).updateData([
+            "is_completed": !task.isCompleted
+        ])
+    }
+    
+    // Helper to reset data
+    private func resetVitals() {
+        self.steps = 0
+        self.heartRate = 0
+        self.wristTemperature = 0.0
+        self.sleepDuration = 0.0
     }
 }

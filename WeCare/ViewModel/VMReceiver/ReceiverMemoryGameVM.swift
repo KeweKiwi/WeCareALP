@@ -45,14 +45,14 @@ class ReceiverMemoryGameVM: ObservableObject {
     
     func startNewGame(difficulty: Difficulty) {
         // Daftar Emoji Buah-buahan
-        let cardContents = ["🍓", "🍉", "🍌", "🍇", "🍎", "🍒", "🥝", "🍍", "🥥", "🍋", "🍊", "🍐"]
+        let cardContents = ["🍓", "🍉", "🍌", "🍇", "🍎", "🍒", "🥝", "🍍", "🥥", "🍋", "🍊", "🍐", "🥭", "🫐", "🍈"]
         
         // Tentukan jumlah pasangan berdasarkan kesulitan
         let pairsNeeded: Int
         switch difficulty {
         case .easy:   pairsNeeded = 6  // 12 kartu
         case .medium: pairsNeeded = 8  // 16 kartu
-        case .hard:   pairsNeeded = 12 // 24 kartu
+        case .hard:   pairsNeeded = 15 // 30 kartu
         }
         
         var newCards: [MemoryCard] = []

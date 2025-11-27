@@ -25,14 +25,25 @@ struct CrosswordCell: Identifiable {
     var isCorrect: Bool = false
     
     // Jika tidak ada jawaban (answer kosong), maka sel ini "blocked" (tembok hitam/kosong)
-    var isBlocked: Bool { answer.isEmpty }
+    var isBlocked: Bool
     
-    init(row: Int, col: Int, clueNumber: Int? = nil, answer: String) {
-        self.row = row
-        self.col = col
-        self.clueNumber = clueNumber
-        self.answer = answer.uppercased()
-    }
+    init(
+            row: Int,
+            col: Int,
+            clueNumber: Int? = nil,
+            answer: String,
+            input: String = "",
+            isCorrect: Bool = false,
+            isBlocked: Bool = true
+        ) {
+            self.row = row
+            self.col = col
+            self.clueNumber = clueNumber
+            self.answer = answer
+            self.input = input
+            self.isCorrect = isCorrect
+            self.isBlocked = answer.isEmpty ? true : isBlocked
+        }
 }
 // MARK: - Utility Extension
 extension Color {

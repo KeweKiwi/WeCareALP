@@ -1,334 +1,312 @@
 import SwiftUI
 
+
 struct ReceiverCrosswordGameView: View {
-    
-    @StateObject private var viewModel = CrosswordViewModel()
+    @StateObject private var viewModel = ReceiverCrosswordViewModel()
     @Environment(\.dismiss) var dismiss
+    @FocusState private var isKeyboardFocused: Bool
     
     var body: some View {
         VStack(spacing: 0) {
-            // 1. Header
+            
             headerView
             
             ScrollView {
-                VStack(spacing: 20) {
-                    // 2. Status Text
-                    Text(viewModel.gameStatus)
-                        .font(.headline)
-                        .foregroundColor(viewModel.isPuzzleSolved ? .green : .secondary)
-                        .padding(.top, 10)
-                    
-                    // 3. Grid Area - FIXED VERSION
-                    crosswordGridFixed
-                        .padding(.horizontal)
-                    
-                    // 4. Clues
-                    ClueListView(across: viewModel.cluesAcross, down: viewModel.cluesDown)
-                    
-                    // 5. Action Buttons
+                VStack(spacing: 16) {
+                    gameStatus
+                    crosswordGrid
+                    hiddenKeyboardTextField
+                    cluesList
                     actionButtons
                 }
                 .padding(.bottom, 20)
             }
-            
-            // 6. Keyboard
-            customKeyboard
-                .background(Color(.systemGray6))
-                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: -2)
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.white.ignoresSafeArea())
         .navigationBarHidden(true)
     }
     
-    // MARK: - Sub-Views
     
+    // MARK: HEADER
     private var headerView: some View {
         HStack {
-            Text("General Puzzle")
-                .font(.system(size: 28, weight: .bold, design: .serif))
-                .foregroundColor(Color.black)
+            Text("Crossword")
+                .font(.system(size: 32, weight: .black))
+                .foregroundColor(Color(hex: "#f67c5f"))
+            
             Spacer()
-            Button(action: { dismiss() }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(.gray)
+            
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("Close")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color(hex: "#f67c5f"))
+                .cornerRadius(12)
             }
         }
-        .padding()
-        .background(Color.white)
-        .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 12)
+        .background(.white)
+        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
     }
     
-    // FIXED: Menggunakan pendekatan yang lebih stabil
-    private var crosswordGridFixed: some View {
-        GeometryReader { geometry in
-            let availableWidth = geometry.size.width
-            let cellSize = availableWidth / CGFloat(viewModel.numCols)
-            let totalHeight = cellSize * CGFloat(viewModel.numRows)
+    
+    // MARK: GAME STATUS
+    private var gameStatus: some View {
+        HStack(spacing: 10) {
+            Image(systemName: viewModel.isPuzzleSolved ? "checkmark.circle.fill" : "gamecontroller.fill")
+                .font(.system(size: 20))
+                .foregroundColor(viewModel.isPuzzleSolved ? Color(hex: "#edcf72") : Color(hex: "#edc53f"))
             
-            VStack(spacing: 0) {
-                ForEach(0..<viewModel.numRows, id: \.self) { row in
-                    HStack(spacing: 0) {
-                        ForEach(0..<viewModel.numCols, id: \.self) { col in
-                            let cell = viewModel.grid[row][col]
-                            CrosswordCellView(
-                                cell: cell,
-                                isSelected: cell.id == viewModel.selectedCellID,
-                                size: cellSize
-                            )
-                            .onTapGesture {
-                                viewModel.selectCell(cell)
-                            }
+            Text(viewModel.gameStatus)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color(hex: "#776e65"))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Color(hex: "#fff9e6"))
+        .cornerRadius(14)
+        .padding(.horizontal, 24)
+        .padding(.top, 8)
+        .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
+    }
+    
+    
+    // MARK: CROSSWORD GRID
+    private var crosswordGrid: some View {
+        let gridSize = UIScreen.main.bounds.width - 48
+        let cellSize = gridSize / CGFloat(viewModel.numCols)
+        
+        return VStack(spacing: 0) {
+            ForEach(0..<viewModel.numRows, id: \.self) { r in
+                HStack(spacing: 0) {
+                    ForEach(0..<viewModel.numCols, id: \.self) { c in
+                        CrosswordCellView(
+                            cell: viewModel.grid[r][c],
+                            isSelected: viewModel.grid[r][c].id == viewModel.selectedCellID,
+                            size: cellSize
+                        ) {
+                            viewModel.selectCell(viewModel.grid[r][c])
+                            isKeyboardFocused = true
                         }
                     }
                 }
             }
-            .frame(width: availableWidth, height: totalHeight)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
-        .frame(height: UIScreen.main.bounds.width - 32) // Fixed height based on screen width
+        .frame(width: gridSize, height: gridSize)
+        .background(Color(hex: "#bbada0"))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+        .padding(.horizontal, 24)
     }
     
+    
+    // MARK: HIDDEN KEYBOARD INPUT
+    private var hiddenKeyboardTextField: some View {
+        TextField("", text: selectedCellBinding)
+            .keyboardType(.alphabet)
+            .textInputAutocapitalization(.characters)
+            .disableAutocorrection(true)
+            .focused($isKeyboardFocused)
+            .opacity(0.01)
+            .frame(width: 1, height: 1)
+    }
+    
+    private var selectedCellBinding: Binding<String> {
+        Binding(
+            get: {
+                guard let id = viewModel.selectedCellID else { return "" }
+                for r in 0..<viewModel.numRows {
+                    for c in 0..<viewModel.numCols {
+                        if viewModel.grid[r][c].id == id {
+                            return viewModel.grid[r][c].input
+                        }
+                    }
+                }
+                return ""
+            },
+            set: { newVal in
+                guard let id = viewModel.selectedCellID else { return }
+                
+                let upper = newVal.uppercased()
+                let letters = upper.filter { $0.isLetter }
+                let finalChar = letters.last.map { String($0) } ?? ""
+                
+                for r in 0..<viewModel.numRows {
+                    for c in 0..<viewModel.numCols {
+                        if viewModel.grid[r][c].id == id {
+                            viewModel.grid[r][c].input = finalChar
+                            return
+                        }
+                    }
+                }
+            }
+        )
+    }
+    
+    
+    // MARK: CLUES LIST
+    private var cluesList: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            
+            Text("Clues")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(Color(hex: "#776e65"))
+            
+            HStack(alignment: .top, spacing: 12) {
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .foregroundColor(Color(hex: "#f2b179"))
+                        Text("Across")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(Color(hex: "#776e65"))
+                    }
+                    ForEach(viewModel.cluesAcross, id: \.self) { clue in
+                        HStack(spacing: 6) {
+                            Text("•").foregroundColor(Color(hex: "#f2b179"))
+                            Text(clue)
+                                .font(.system(size: 13))
+                                .foregroundColor(Color(hex: "#776e65"))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color(hex: "#fff9e6"))
+                .cornerRadius(12)
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .foregroundColor(Color(hex: "#edcf72"))
+                        Text("Down")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(Color(hex: "#776e65"))
+                    }
+                    ForEach(viewModel.cluesDown, id: \.self) { clue in
+                        HStack(spacing: 6) {
+                            Text("•").foregroundColor(Color(hex: "#edcf72"))
+                            Text(clue)
+                                .font(.system(size: 13))
+                                .foregroundColor(Color(hex: "#776e65"))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color(hex: "#fff9e6"))
+                .cornerRadius(12)
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
+        .padding(.horizontal, 24)
+    }
+    
+    
+    // MARK: BUTTONS
     private var actionButtons: some View {
-        HStack(spacing: 15) {
-            Button(action: { viewModel.checkAnswers() }) {
-                HStack {
+        HStack(spacing: 12) {
+            
+            Button {
+                viewModel.checkAnswers()
+            } label: {
+                HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                     Text("Check")
-                        .font(.headline)
                 }
+                .font(.system(size: 18, weight: .bold))
                 .frame(maxWidth: .infinity)
-                .padding()
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color(hex: "#a6d17d"),
-                            Color(hex: "#8bc34a")
-                        ]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .padding(.vertical, 16)
+                .background(Color(hex: "#edcf72"))
                 .foregroundColor(.white)
-                .cornerRadius(12)
-                .shadow(color: Color(hex: "#a6d17d").opacity(0.4), radius: 6, y: 3)
+                .cornerRadius(16)
             }
             
-            Button(action: { viewModel.createPuzzle() }) {
-                HStack {
-                    Image(systemName: "arrow.clockwise.circle.fill")
+            Button {
+                viewModel.createPuzzle()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.clockwise")
                     Text("Reset")
-                        .font(.headline)
                 }
+                .font(.system(size: 18, weight: .bold))
                 .frame(maxWidth: .infinity)
-                .padding()
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color(hex: "#fa6255"),
-                            Color(hex: "#ef4444")
-                        ]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .padding(.vertical, 16)
+                .background(Color(hex: "#f67c5f"))
                 .foregroundColor(.white)
-                .cornerRadius(12)
-                .shadow(color: Color(hex: "#fa6255").opacity(0.4), radius: 6, y: 3)
+                .cornerRadius(16)
             }
         }
-        .padding(.horizontal)
-    }
-    
-    private var customKeyboard: some View {
-        KeyboardView(
-            onLetterTapped: { viewModel.inputLetter($0) },
-            onDeleteTapped: { viewModel.deleteLetter() }
-        )
-        .padding(.bottom, 20)
-        .padding(.top, 10)
+        .padding(.horizontal, 24)
     }
 }
 
-// MARK: - Visual Kotak (Criss-Cross Style)
+
+
+
+// MARK: - CELL VIEW (VISUAL ONLY)
+
+
 struct CrosswordCellView: View {
     let cell: CrosswordCell
     let isSelected: Bool
     let size: CGFloat
+    let onTap: () -> Void
     
     var body: some View {
         ZStack {
-            // HANYA gambar jika sel memiliki jawaban (bukan blocked)
             if !cell.isBlocked {
-                // 1. Background Putih
                 Rectangle()
-                    .fill(Color.white)
+                    .fill(isSelected ? Color(hex: "#ffe9a3") : .white)
+                    .animation(.easeInOut(duration: 0.15), value: isSelected)
                 
-                // 2. Border Hitam Tegas
                 Rectangle()
-                    .stroke(Color.black, lineWidth: 1.5)
+                    .stroke(Color(hex: "#bbada0"), lineWidth: 1)
                 
-                // 3. Highlight jika dipilih
-                if isSelected {
-                    Rectangle()
-                        .fill(Color(hex: "#fef08a").opacity(0.5))
-                    Rectangle()
-                        .stroke(Color(hex: "#3b82f6"), lineWidth: 3)
-                }
-                
-                // 4. Nomor Petunjuk
-                if let clueNo = cell.clueNumber {
-                    Text("\(clueNo)")
-                        .font(.system(size: max(8, size * 0.25), weight: .semibold, design: .serif))
-                        .foregroundColor(.black)
+                if let n = cell.clueNumber {
+                    Text("\(n)")
+                        .font(.system(size: max(8, size * 0.25), weight: .semibold))
+                        .foregroundColor(Color(hex: "#776e65"))
                         .frame(width: size, height: size, alignment: .topLeading)
                         .padding(2)
                 }
                 
-                // 5. Input Huruf
                 Text(cell.input)
-                    .font(.system(size: max(14, size * 0.55), weight: .bold, design: .serif))
-                    .foregroundColor(cell.isCorrect ? Color(hex: "#16a34a") : .black)
-                    .frame(width: size, height: size)
+                    .font(.system(size: max(14, size * 0.55), weight: .bold))
+                    .foregroundColor(Color(hex: "#776e65"))
             } else {
-                // JIKA BLOCKED: Transparan total
-                Color.clear
+                Color(hex: "#bbada0")
             }
         }
         .frame(width: size, height: size)
         .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
     }
 }
 
-// MARK: - Clue List View
-struct ClueListView: View {
-    let across: [String]
-    let down: [String]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            Text("Clues")
-                .font(.title2.bold())
-                .foregroundColor(.black)
-            
-            HStack(alignment: .top, spacing: 15) {
-                // Across
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Image(systemName: "arrow.right")
-                            .foregroundColor(Color(hex: "#3b82f6"))
-                        Text("Across")
-                            .font(.headline)
-                            .foregroundColor(Color(hex: "#3b82f6"))
-                    }
-                    
-                    ForEach(across, id: \.self) { clue in
-                        HStack(alignment: .top, spacing: 6) {
-                            Text("•")
-                                .foregroundColor(Color(hex: "#3b82f6"))
-                            Text(clue)
-                                .font(.subheadline)
-                                .foregroundColor(.black)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(hex: "#dbeafe").opacity(0.5))
-                )
-                
-                // Down
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Image(systemName: "arrow.down")
-                            .foregroundColor(Color(hex: "#10b981"))
-                        Text("Down")
-                            .font(.headline)
-                            .foregroundColor(Color(hex: "#10b981"))
-                    }
-                    
-                    ForEach(down, id: \.self) { clue in
-                        HStack(alignment: .top, spacing: 6) {
-                            Text("•")
-                                .foregroundColor(Color(hex: "#10b981"))
-                            Text(clue)
-                                .font(.subheadline)
-                                .foregroundColor(.black)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(hex: "#d1fae5").opacity(0.5))
-                )
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
-        )
-        .padding(.horizontal)
-    }
-}
 
-// MARK: - Keyboard View
-struct KeyboardView: View {
-    let onLetterTapped: (String) -> Void
-    let onDeleteTapped: () -> Void
-    let rows = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"]
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            ForEach(0..<rows.count, id: \.self) { i in
-                HStack(spacing: 5) {
-                    if i == 2 { Spacer() }
-                    ForEach(Array(rows[i]), id: \.self) { char in
-                        Button(action: { onLetterTapped(String(char)) }) {
-                            Text(String(char))
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.black)
-                                .frame(width: 34, height: 46)
-                                .background(Color.white)
-                                .cornerRadius(6)
-                                .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
-                        }
-                    }
-                    if i == 2 {
-                        Button(action: onDeleteTapped) {
-                            Image(systemName: "delete.left.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(.white)
-                                .frame(width: 50, height: 46)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color(hex: "#ef4444"),
-                                            Color(hex: "#dc2626")
-                                        ]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(6)
-                                .shadow(color: Color(hex: "#ef4444").opacity(0.4), radius: 3, y: 2)
-                        }
-                        Spacer()
-                    }
-                }
-            }
-        }
-        .padding(.horizontal)
-    }
-}
+
 
 #Preview {
     ReceiverCrosswordGameView()
 }
+
+
+
+
+
