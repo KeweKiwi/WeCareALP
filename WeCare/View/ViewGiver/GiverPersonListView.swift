@@ -1,6 +1,5 @@
 import SwiftUI
 
-
 enum PersonDestination: Hashable {
     case info(GiverPersonCardViewData)
     case location(GiverPersonCardViewData)
@@ -8,8 +7,10 @@ enum PersonDestination: Hashable {
     case volunteer
 }
 
-
 struct GiverPersonListView: View {
+    
+    // 🔹 Dapat coordinator dari environment (bukan StateObject di sini)
+    @EnvironmentObject var coordinator: NavigationCoordinator
     
     private let persons: [GiverPersonCardViewData] = [
         GiverPersonCardViewData(
@@ -147,6 +148,13 @@ struct GiverPersonListView: View {
                 }
             }
         }
+        // 🔹 Listen ke sinyal popToRoot dari coordinator
+        .onChange(of: coordinator.shouldPopToRoot) { newValue in
+            if newValue {
+                path.removeAll()              // clear navigation stack → balik ke root
+                coordinator.shouldPopToRoot = false
+            }
+        }
     }
     
     private func makeVitalSign(from p: GiverPersonCardViewData) -> VitalSign {
@@ -162,7 +170,6 @@ struct GiverPersonListView: View {
         )
     }
 }
-
 
 struct FilterChip: View {
     let text: String
@@ -186,13 +193,9 @@ struct FilterChip: View {
     }
 }
 
-
 #Preview {
     GiverPersonListView()
+        .environmentObject(NavigationCoordinator())   // 🔹 penting biar preview ga crash
 }
-
-
-
-
 
 

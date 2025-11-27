@@ -1,5 +1,5 @@
 //
-//  TaskAssignmentView.swift
+//  VolunteerTaskAssignmentView.swift
 //  WeCare
 //
 //  Created by student on 19/11/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct TaskAssignmentView: View {
+struct VolunteerTaskAssignmentView: View {
     let volunteer: Volunteer
     
     @State private var taskDescription = ""
