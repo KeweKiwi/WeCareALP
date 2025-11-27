@@ -74,7 +74,7 @@ struct VolunteerDetailView: View {
                 }
                 .padding(.horizontal)
 
-                NavigationLink(destination: TaskAssignmentView(volunteer: viewModel.volunteer)) {
+                NavigationLink(destination: VolunteerTaskAssignmentView(volunteer: viewModel.volunteer)) {
                     Text("Request Help")
                         .font(.headline)
                         .frame(maxWidth: .infinity)

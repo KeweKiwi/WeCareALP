@@ -8,9 +8,9 @@
 import SwiftUI
 
 struct VolunteerConfirmationView: View {
+    @EnvironmentObject var coordinator: NavigationCoordinator      // ⬅️ ambil dari Environment
     @StateObject var viewModel: VolunteerConfirmationVM
     @State private var showCompletionSheet: Bool = false
-    @State private var goToPersonList: Bool = false      // Navigate ke GiverPersonListView
     
     var body: some View {
         VStack {
@@ -32,17 +32,7 @@ struct VolunteerConfirmationView: View {
                 }
             )
         }
-        // 🔒 Hidden NavigationLink → pindah ke GiverPersonListView TANPA numpuk layer baru
-        .background(
-            NavigationLink(
-                destination: GiverPersonListView()
-                    .navigationBarBackButtonHidden(true)          // ⬅️ hilangin tombol back
-                    .toolbar(.hidden, for: .navigationBar),
-                isActive: $goToPersonList
-            ) {
-                EmptyView()
-            }
-        )
+        // ⛔️ TIDAK pakai NavigationLink hidden lagi
     }
     
     // MARK: - Waiting View
@@ -84,7 +74,7 @@ struct VolunteerConfirmationView: View {
     // MARK: - Approved View
     private var approvedView: some View {
         VStack(spacing: 8) {
-            // 🔝 HEADER: Call & Video Call – tetap di atas
+            // 🔝 HEADER: Call & Video Call
             VStack(spacing: 8) {
                 Text("Volunteer: \(viewModel.volunteer.name)")
                     .font(.subheadline)
@@ -129,10 +119,10 @@ struct VolunteerConfirmationView: View {
             
             Divider()
             
-            // 🧾 SCROLL AREA: centang + chat + status tugas
+            // 🧾 SCROLL AREA
             ScrollView {
                 VStack(spacing: 16) {
-                    // Centang Approved – ikut scroll ke atas
+                    // Centang Approved
                     VStack(spacing: 10) {
                         ZStack {
                             Circle()
@@ -170,7 +160,7 @@ struct VolunteerConfirmationView: View {
                         .padding(.top, 4)
                     }
                     
-                    // Task completion & tip section
+                    // Task completion & tip
                     if !viewModel.isTaskCompleted {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Task Status")
@@ -199,7 +189,7 @@ struct VolunteerConfirmationView: View {
                         }
                         .padding(.top, 8)
                     } else {
-                        // ✅ Task Completed + tombol kecil ke GiverPersonListView
+                        // ✅ Task Completed + tombol ke root (GiverPersonListView)
                         VStack(alignment: .leading, spacing: 8) {
                             HStack(alignment: .top, spacing: 8) {
                                 VStack(alignment: .leading, spacing: 4) {
@@ -221,8 +211,8 @@ struct VolunteerConfirmationView: View {
                                 Spacer()
                                 
                                 Button(action: {
-                                    // ⬅️ trigger NavigationLink ke GiverPersonListView
-                                    goToPersonList = true
+                                    // ⬅️ trigger popToRoot lewat coordinator
+                                    coordinator.popToRoot()          // atau: coordinator.shouldPopToRoot = true
                                 }) {
                                     Image(systemName: "person.2.crop.square.stack.fill")
                                         .font(.title3)

@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - Sudoku View
 struct ReceiverSudokuGameView: View {
     @StateObject var game = ReceiverSudokuGameVM()
     @Environment(\.dismiss) var dismiss
@@ -21,172 +20,220 @@ struct ReceiverSudokuGameView: View {
     }
     
     var body: some View {
-        ZStack {
-            // Background gradient
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(hex: "#f0f9ff"),
-                    Color(hex: "#e0f2fe")
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+        VStack(spacing: 16) {
+            // MARK: - Header
+            header
             
-            VStack(spacing: 0) {
-                // MARK: - Modern Header
-                VStack(spacing: 16) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Sudoku")
-                                .font(.system(size: 34, weight: .bold))
-                                .foregroundColor(Color(hex: "#1e40af"))
-                        }
-                        
-                        Spacer()
-                        
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(Color(hex: "#64748b"))
-                        }
-                    }
-                    
-                    // MARK: - Level Selector with Modern Design
-                    HStack(spacing: 12) {
-                        ForEach(DifficultyLevel.allCases) { level in
-                            Button {
-                                withAnimation(.spring(response: 0.3)) {
-                                    game.startNewGame(level: level)
-                                }
-                            } label: {
-                                VStack(spacing: 6) {
-                                    Text(level.icon)
-                                        .font(.title2)
-                                    Text(level.rawValue)
-                                        .font(.caption.weight(.semibold))
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(game.selectedLevel == level ?
-                                              Color(hex: level.color) :
-                                              Color.white.opacity(0.7))
-                                        .shadow(color: game.selectedLevel == level ?
-                                               Color(hex: level.color).opacity(0.4) :
-                                               Color.black.opacity(0.05),
-                                               radius: game.selectedLevel == level ? 8 : 2,
-                                               y: game.selectedLevel == level ? 4 : 1)
-                                )
-                                .foregroundColor(game.selectedLevel == level ? .white : Color(hex: "#475569"))
-                            }
-                        }
-                    }
-                    
-                    // MARK: - Game Status with Icon
-                    HStack(spacing: 8) {
-                        Image(systemName: game.gameStatus.contains("Congratulations") ? "checkmark.circle.fill" :
-                              game.gameStatus.contains("incorrect") ? "xmark.circle.fill" : "play.circle.fill")
-                            .foregroundColor(game.gameStatus.contains("Congratulations") ? Color(hex: "#16a34a") :
-                                           game.gameStatus.contains("incorrect") ? Color(hex: "#dc2626") : Color(hex: "#3b82f6"))
-                        
-                        Text(game.gameStatus)
-                            .font(.callout.weight(.medium))
-                            .foregroundColor(game.gameStatus.contains("Congratulations") ? Color(hex: "#16a34a") :
-                                           game.gameStatus.contains("incorrect") ? Color(hex: "#dc2626") : Color(hex: "#475569"))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(game.gameStatus.contains("Congratulations") ? Color(hex: "#dcfce7") :
-                                 game.gameStatus.contains("incorrect") ? Color(hex: "#fee2e2") : Color.white.opacity(0.6))
-                    )
-                }
-                .padding()
-
-                
-                // MARK: - Enhanced Sudoku Grid
-                VStack(spacing: 0) {
-                    ForEach(0..<9, id: \.self) { row in
-                        HStack(spacing: 0) {
-                            ForEach(0..<9, id: \.self) { col in
-                                EnhancedCellView(
-                                    cell: game.board[row][col],
-                                    row: row,
-                                    col: col,
-                                    game: game,
-                                    selectedCell: selectedCell,
-                                    selectedValue: selectedValue
-                                )
-                                .border(width: (col + 1) % 3 == 0 && col != 8 ? 3 : 1,
-                                       edges: [.trailing],
-                                       color: Color(hex: "#1e40af"))
-                            }
-                        }
-                        .border(width: (row + 1) % 3 == 0 && row != 8 ? 3 : 1,
-                               edges: [.bottom],
-                               color: Color(hex: "#1e40af"))
-                    }
-                }
-                .background(Color(hex: "#1e40af"))
-                .cornerRadius(16)
-                .shadow(color: Color.black.opacity(0.15), radius: 12, y: 6)
-
-                .padding(.bottom,10)
-                
-
-                
-                // MARK: - Modern Number Pad
-                if !game.isBoardFull {
-                    ModernNumberPad(game: game)
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
-                }
-                
-                // MARK: - Action Buttons
-                HStack(spacing: 12) {
-                    Button {
-                        withAnimation(.spring(response: 0.3)) {
-                            game.startNewGame(level: game.selectedLevel)
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.clockwise.circle.fill")
-                                .font(.title3)
-                            Text("New Game")
-                                .font(.headline)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color(hex: "#3b82f6"),
-                                    Color(hex: "#2563eb")
-                                ]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .foregroundColor(.white)
-                        .cornerRadius(16)
-                        .shadow(color: Color(hex: "#3b82f6").opacity(0.4), radius: 8, y: 4)
-                    }
-                }
-                .padding(.leading,10)
-                .padding(.trailing,13)
-                
+            // MARK: - Level Selector
+            levelSelector
+            
+            // MARK: - Game Status
+            gameStatus
+            
+            // MARK: - Sudoku Grid
+            sudokuGrid
+            
+            Spacer(minLength: 8)
+            
+            // MARK: - Number Pad
+            if !game.isBoardFull {
+                numberPad
             }
+            
+            // MARK: - New Game Button
+            newGameButton
         }
+        .padding(.top, 8)
+        .background(Color.white.ignoresSafeArea())
         .onChange(of: game.gameStatus) { status in
             if status.contains("Congratulations") {
                 showConfetti = true
             }
         }
+    }
+}
+
+// MARK: - Header
+extension ReceiverSudokuGameView {
+    private var header: some View {
+        HStack {
+            Text("Sudoku")
+                .font(.system(size: 32, weight: .black))
+                .foregroundColor(Color(hex: "#f67c5f"))
+            
+            Spacer()
+            
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("Close")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color(hex: "#f67c5f"))
+                .cornerRadius(12)
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+}
+
+// MARK: - Level Selector
+extension ReceiverSudokuGameView {
+    private var levelSelector: some View {
+        HStack(spacing: 12) {
+            ForEach(DifficultyLevel.allCases) { level in
+                Button {
+                    withAnimation(.spring(response: 0.3)) {
+                        game.startNewGame(level: level)
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        Text(level.icon)
+                            .font(.title2)
+                        Text(level.rawValue)
+                            .font(.caption.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        game.selectedLevel == level ?
+                        Color(hex: level.color) :
+                        Color(hex: "#fff9e6")
+                    )
+                    .foregroundColor(
+                        game.selectedLevel == level ?
+                        .white :
+                        Color(hex: "#776e65")
+                    )
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.08), radius: 4, y: 2)
+                }
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+}
+
+// MARK: - Game Status
+extension ReceiverSudokuGameView {
+    private var gameStatus: some View {
+        HStack(spacing: 10) {
+            Image(systemName: game.gameStatus.contains("Congratulations") ?
+                  "checkmark.circle.fill" :
+                  game.gameStatus.contains("incorrect") ?
+                  "xmark.circle.fill" : "gamecontroller.fill")
+                .font(.system(size: 20))
+                .foregroundColor(
+                    game.gameStatus.contains("Congratulations") ?
+                    Color(hex: "#edcf72") :
+                    game.gameStatus.contains("incorrect") ?
+                    Color(hex: "#f67c5f") :
+                    Color(hex: "#edc53f")
+                )
+            
+            Text(game.gameStatus)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color(hex: "#776e65"))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Color(hex: "#fff9e6"))
+        .cornerRadius(14)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, y: 2)
+        .padding(.horizontal, 24)
+    }
+}
+
+// MARK: - Sudoku Grid
+extension ReceiverSudokuGameView {
+    private var sudokuGrid: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<9, id: \.self) { row in
+                HStack(spacing: 0) {
+                    ForEach(0..<9, id: \.self) { col in
+                        EnhancedCellView(
+                            cell: game.board[row][col],
+                            row: row,
+                            col: col,
+                            game: game,
+                            selectedCell: selectedCell,
+                            selectedValue: selectedValue
+                        )
+                        .border(
+                            width: (col + 1) % 3 == 0 && col != 8 ? 2 : 1,
+                            edges: [.trailing],
+                            color: Color(hex: "#bbada0")
+                        )
+                    }
+                }
+                .border(
+                    width: (row + 1) % 3 == 0 && row != 8 ? 2 : 1,
+                    edges: [.bottom],
+                    color: Color(hex: "#bbada0")
+                )
+            }
+        }
+        .background(Color(hex: "#bbada0"))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+        .padding(.horizontal, 24)
+    }
+}
+
+// MARK: - Number Pad
+extension ReceiverSudokuGameView {
+    private var numberPad: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                ForEach(1...5, id: \.self) { number in
+                    NumberButton(number: number, game: game)
+                }
+            }
+            
+            HStack(spacing: 10) {
+                ForEach(6...9, id: \.self) { number in
+                    NumberButton(number: number, game: game)
+                }
+                ClearButton(game: game)
+            }
+        }
+        .padding(16)
+        .background(Color(hex: "#fff9e6"))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, y: 2)
+        .padding(.horizontal, 24)
+    }
+}
+
+// MARK: - New Game Button
+extension ReceiverSudokuGameView {
+    private var newGameButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.3)) {
+                game.startNewGame(level: game.selectedLevel)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 18, weight: .bold))
+                Text("New Game")
+                    .font(.system(size: 18, weight: .bold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color(hex: "#f67c5f"))
+            .cornerRadius(16)
+            .shadow(color: Color(hex: "#f67c5f").opacity(0.4), radius: 8, y: 4)
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 8)
     }
 }
 
@@ -222,7 +269,7 @@ struct EnhancedCellView: View {
             
             if let value = cell.value {
                 Text("\(value)")
-                    .font(.system(size: 24, weight: cell.isEditable ? .semibold : .bold))
+                    .font(.system(size: 22, weight: cell.isEditable ? .semibold : .bold))
                     .foregroundColor(foregroundColor)
                     .scaleEffect(scale)
             }
@@ -242,60 +289,30 @@ struct EnhancedCellView: View {
     
     var foregroundColor: Color {
         if cell.isError {
-            return Color(hex: "#dc2626")
+            return Color(hex: "#f67c5f")
         }
         if cell.isEditable {
-            return Color(hex: "#3b82f6")
+            return Color(hex: "#edc53f")
         }
-        return Color(hex: "#1e293b")
+        return Color(hex: "#776e65")
     }
     
     var backgroundColor: Color {
         if cell.isSelected {
-            return Color(hex: "#fbbf24").opacity(0.9)
+            return Color(hex: "#edcf72").opacity(0.6)
         }
         if isSameNumberAsSelected {
-            return Color(hex: "#86efac").opacity(0.6)
+            return Color(hex: "#f2b179").opacity(0.4)
         }
         if isInSameRowColBox {
-            return Color(hex: "#e0e7ff").opacity(0.8)
+            return Color(hex: "#eee4da")
         }
         return Color.white
     }
 }
 
-// MARK: - Modern Number Pad
-struct ModernNumberPad: View {
-    @ObservedObject var game: ReceiverSudokuGameVM
-    
-    let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible()),
-        GridItem(.flexible()),
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
-    
-    var body: some View {
-        VStack(spacing: 10) {
-            LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(1...9, id: \.self) { number in
-                    ModernNumberButton(number: number, game: game)
-                }
-                
-                ModernClearButton(game: game)
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.white.opacity(0.7))
-                .shadow(color: Color.black.opacity(0.05), radius: 8, y: 2)
-        )
-    }
-}
-
-struct ModernNumberButton: View {
+// MARK: - Number Button
+struct NumberButton: View {
     let number: Int
     @ObservedObject var game: ReceiverSudokuGameVM
     @State private var isPressed = false
@@ -317,33 +334,25 @@ struct ModernNumberButton: View {
             }
         } label: {
             Text("\(number)")
-                .font(.title2.bold())
-                .frame(width: 60, height: 60)
+                .font(.system(size: 20, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
                 .background(
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: isDisabled ?
-                                        [Color(hex: "#cbd5e1"), Color(hex: "#94a3b8")] :
-                                        [Color(hex: "#3b82f6"), Color(hex: "#2563eb")]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .shadow(color: isDisabled ? Color.clear : Color(hex: "#3b82f6").opacity(0.4),
-                                   radius: isPressed ? 2 : 6,
-                                   y: isPressed ? 1 : 3)
-                    }
+                    isDisabled ?
+                    Color(hex: "#cdc1b4") :
+                    Color(hex: "#edc53f")
                 )
                 .foregroundColor(.white)
-                .scaleEffect(isPressed ? 0.92 : 1.0)
+                .cornerRadius(10)
+                .shadow(color: Color.black.opacity(isDisabled ? 0 : 0.15), radius: isPressed ? 2 : 4, y: isPressed ? 1 : 2)
+                .scaleEffect(isPressed ? 0.95 : 1.0)
         }
         .disabled(isDisabled)
     }
 }
 
-struct ModernClearButton: View {
+// MARK: - Clear Button
+struct ClearButton: View {
     @ObservedObject var game: ReceiverSudokuGameVM
     @State private var isPressed = false
     
@@ -363,31 +372,25 @@ struct ModernClearButton: View {
                 }
             }
         } label: {
-            Image(systemName: "eraser.fill")
-                .font(.title2.bold())
-                .frame(width: 60, height: 60)
+            Image(systemName: "xmark")
+                .font(.system(size: 20, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
                 .background(
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                gradient: Gradient(colors: isDisabled ?
-                                    [Color(hex: "#cbd5e1"), Color(hex: "#94a3b8")] :
-                                    [Color(hex: "#ef4444"), Color(hex: "#dc2626")]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .shadow(color: isDisabled ? Color.clear : Color(hex: "#ef4444").opacity(0.4),
-                               radius: isPressed ? 2 : 6,
-                               y: isPressed ? 1 : 3)
+                    isDisabled ?
+                    Color(hex: "#cdc1b4") :
+                    Color(hex: "#f67c5f")
                 )
                 .foregroundColor(.white)
-                .scaleEffect(isPressed ? 0.92 : 1.0)
+                .cornerRadius(10)
+                .shadow(color: Color.black.opacity(isDisabled ? 0 : 0.15), radius: isPressed ? 2 : 4, y: isPressed ? 1 : 2)
+                .scaleEffect(isPressed ? 0.95 : 1.0)
         }
         .disabled(isDisabled)
     }
 }
 
+// MARK: - Extensions
 extension View {
     func border(width: CGFloat, edges: [Edge], color: Color) -> some View {
         overlay(EdgeBorder(width: width, edges: edges).foregroundColor(color))
@@ -445,12 +448,13 @@ extension DifficultyLevel {
     
     var color: String {
         switch self {
-        case .easy: return "#10b981"
-        case .medium: return "#f59e0b"
-        case .hard: return "#ef4444"
+        case .easy: return "#edcf72"    // Gold dari 2048
+        case .medium: return "#f2b179"  // Orange soft dari 2048
+        case .hard: return "#f67c5f"    // Coral dari 2048
         }
     }
 }
+
 
 #Preview {
     ReceiverSudokuGameView()
