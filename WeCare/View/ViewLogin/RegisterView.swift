@@ -87,12 +87,21 @@ struct FamilyCodeView: View {
     @FocusState private var isFocused: Bool
     @State private var errorMessage: String? = nil
     @State private var goToSelect: Bool = false
+    
+    // 1. Initialize ViewModel
+    @StateObject private var vm = FamiliesViewModel()
+    
+    // 2. State for loading indicator
+    @State private var isVerifying: Bool = false
+    
     var body: some View {
         ZStack {
             Brand.vlight.opacity(0.25).ignoresSafeArea()
+            
             ScrollView {
                 VStack(spacing: 20) {
-                    // Nav ke pilih biodata (hidden)
+                    
+                    // Nav ke pilih biodata
                     NavigationLink(
                         destination: CareReceiverSelectView(familyCode: familyCode),
                         isActive: $goToSelect
@@ -100,14 +109,19 @@ struct FamilyCodeView: View {
                         EmptyView()
                     }
                     .hidden()
+                    
                     Text("Please enter Family Code")
                         .font(.title2.bold())
+                    
                     Text("Use the 6 digit family code given by your caretaker.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.leading)
+                    
                     OTPBoxes(code: familyCode, slots: 6)
                         .onTapGesture { isFocused = true }
+                    
+                    // Paste & Help Buttons
                     HStack(spacing: 12) {
                         Button {
                             #if canImport(UIKit)
@@ -123,12 +137,13 @@ struct FamilyCodeView: View {
                                 .padding(.vertical, 10)
                                 .background(.white, in: Capsule())
                                 .overlay(
-                                    Capsule()
-                                        .stroke(.black.opacity(0.08), lineWidth: 1)
+                                    Capsule().stroke(.black.opacity(0.08), lineWidth: 1)
                                 )
                         }
                         .buttonStyle(.plain)
+                        
                         Spacer()
+                        
                         Button {
                             errorMessage = "Ask your caretaker. The family code is generated after they log in and set up your family."
                         } label: {
@@ -139,6 +154,8 @@ struct FamilyCodeView: View {
                         }
                         .buttonStyle(.plain)
                     }
+                    
+                    // Hidden TextField for input handling
                     TextField("", text: Binding(
                         get: { familyCode },
                         set: { newValue in
@@ -153,34 +170,46 @@ struct FamilyCodeView: View {
                     .opacity(0.01)
                     .accessibilityHidden(true)
                     .onAppear { isFocused = true }
+                    
+                    // Error Message Display
                     if let msg = errorMessage {
                         Text(msg)
                             .font(.footnote)
                             .foregroundStyle(.red)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    
+                    // 3. Updated Continue Button
                     Button {
                         if familyCode.count < 6 {
                             errorMessage = "Code must be 6 digits"
                         } else {
-                            // Nanti di sini: call API cek code
-                            // kalau OK:
-                            goToSelect = true
+                            verifyCode()
                         }
                     } label: {
-                        Text("Continue")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(familyCode.count == 6 ? Color.black : Color.gray.opacity(0.3))
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        HStack {
+                            if isVerifying {
+                                ProgressView()
+                                    .tint(.white)
+                                    .padding(.trailing, 8)
+                            }
+                            Text(isVerifying ? "Verifying..." : "Continue")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background((familyCode.count == 6 && !isVerifying) ? Color.black : Color.gray.opacity(0.3))
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
-                    .disabled(familyCode.count != 6)
+                    .disabled(familyCode.count != 6 || isVerifying)
+                    
+                    // Information Box
                     VStack(spacing: 14) {
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "info.circle.fill")
                                 .font(.title3)
                                 .foregroundStyle(Brand.sky)
+                            
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Don’t see the code?")
                                     .font(.subheadline.bold())
@@ -202,10 +231,29 @@ struct FamilyCodeView: View {
                         .shadow(color: .black.opacity(0.04), radius: 6, y: 4)
                     }
                     .padding(.top, 8)
+                    
                     Spacer().frame(height: 16)
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+    
+    // 4. Verification Logic
+    private func verifyCode() {
+        isVerifying = true
+        errorMessage = nil
+        
+        vm.fetchFamily(byFamilyCode: familyCode) { family in
+            isVerifying = false
+            
+            if family != nil {
+                // Success: Family found
+                goToSelect = true
+            } else {
+                // Fail: No family found
+                errorMessage = "Invalid Family Code. Please check and try again."
             }
         }
     }

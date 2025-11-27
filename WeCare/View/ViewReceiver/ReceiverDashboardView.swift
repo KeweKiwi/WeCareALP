@@ -1,20 +1,17 @@
 import SwiftUI
-// MARK: - Dashboard View (Revisi: Latar Belakang & Progres Lingkaran Tugas)
+
 struct ReceiverDashboardView: View {
-    @ObservedObject var viewModel: ReceiverVM
-    private let stepGoal = 6000 // Target langkah
+    @StateObject var viewModel = ReceiverVM()
     
-    // Hitung progress langkah
-    private var stepProgressPercentage: Int {
-        min(Int(Double(viewModel.steps) / Double(stepGoal) * 100), 100)
-    }
+    private let stepGoal = 6000
+    private let currentUserId = 2
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 25) { // Spasi antara elemen
+                VStack(spacing: 25) {
                     
-                    // Header (tetap sama)
+                    // --- Header ---
                     HStack {
                         Image(systemName: "person.circle.fill")
                             .resizable()
@@ -25,8 +22,12 @@ struct ReceiverDashboardView: View {
                             Text("Good Morning!")
                                 .font(.title3)
                                 .foregroundColor(.gray)
-                            Text("Mr/Ms") // Ganti dengan nama
+                            
+                            // UPDATED: Show Name instead of ID
+                            Text(viewModel.currentUserName)
                                 .font(.largeTitle.bold())
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
                         }
                         
                         Spacer()
@@ -40,8 +41,7 @@ struct ReceiverDashboardView: View {
                     }
                     .padding(.horizontal)
                     
-                    // BARU: Task & Steps Progress Card (Menggantikan DailyOverviewCard)
-                    // Sekarang berisi progres lingkaran untuk tugas DAN progres langkah.
+                    // --- Task & Steps Progress Card ---
                     TaskAndStepsProgressCard(
                         taskCompletionPercentage: viewModel.taskCompletionPercentage,
                         completedTasks: viewModel.tasks.filter { $0.isCompleted }.count,
@@ -51,7 +51,7 @@ struct ReceiverDashboardView: View {
                     )
                     .padding(.horizontal)
                     
-                    // Daftar Tugas Harian (tetap sama)
+                    // --- Daily Tasks List ---
                     VStack(alignment: .leading, spacing: 15) {
                         Text("⏰ Daily Tasks")
                             .font(.title.bold())
@@ -59,7 +59,7 @@ struct ReceiverDashboardView: View {
                             .padding(.horizontal)
                         
                         if viewModel.tasks.isEmpty {
-                            Text("No tasks for today.")
+                            Text("No tasks found.")
                                 .font(.title3)
                                 .foregroundColor(.gray)
                                 .padding(30)
@@ -68,8 +68,8 @@ struct ReceiverDashboardView: View {
                                 .cornerRadius(15)
                                 .padding(.horizontal)
                         } else {
-                            ForEach($viewModel.tasks) { $task in
-                                ReminderItem(task: $task, viewModel: viewModel)
+                            ForEach(viewModel.tasks) { task in
+                                ReminderItem(task: task, viewModel: viewModel)
                             }
                         }
                     }
@@ -78,11 +78,22 @@ struct ReceiverDashboardView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarHidden(true)
-            .background(Color(.systemGray6).ignoresSafeArea()) // Kembali ke latar belakang default systemGray6
+            .background(Color(.systemGray6).ignoresSafeArea())
+            .onAppear {
+                // 1. Fetch User Profile (Name)
+                viewModel.fetchUserProfile(userId: currentUserId)
+                
+                // 2. Fetch Tasks
+                viewModel.fetchTasks(forReceiverId: currentUserId)
+                
+                // 3. Fetch Steps
+                viewModel.fetchLatestSteps(forUserId: currentUserId)
+            }
         }
     }
 }
-// MARK: - Komponen Baru: Task & Steps Progress Card (Gabungan)
+
+// MARK: - TaskAndStepsProgressCard
 struct TaskAndStepsProgressCard: View {
     var taskCompletionPercentage: Int
     var completedTasks: Int
@@ -90,14 +101,8 @@ struct TaskAndStepsProgressCard: View {
     var currentSteps: Int
     var goalSteps: Int
     
-    private var stepProgressPercentage: Int {
-        min(Int(Double(currentSteps) / Double(goalSteps) * 100), 100)
-    }
-    
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) { // Spasi lebih besar di dalam kartu
-            
-            // Progres Tugas dengan Lingkaran
+        VStack(alignment: .leading, spacing: 20) {
             HStack {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Tasks Completed")
@@ -110,22 +115,19 @@ struct TaskAndStepsProgressCard: View {
                 Spacer()
                 ZStack {
                     Circle()
-                        .stroke(Color(hex: "#a6d17d").opacity(0.3), lineWidth: 10) // Lebih tebal
-                        .frame(width: 80, height: 80) // Lebih besar
+                        .stroke(Color(hex: "#a6d17d").opacity(0.3), lineWidth: 10)
+                        .frame(width: 80, height: 80)
                     Circle()
                         .trim(from: 0, to: CGFloat(taskCompletionPercentage) / 100.0)
-                        .stroke(Color(hex: "#a6d17d"), style: StrokeStyle(lineWidth: 10, lineCap: .round)) // Lebih tebal
-                        .frame(width: 80, height: 80) // Lebih besar
+                        .stroke(Color(hex: "#a6d17d"), style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                        .frame(width: 80, height: 80)
                         .rotationEffect(.degrees(-90))
                     Text("\(taskCompletionPercentage)%")
                         .font(.headline.bold())
                         .foregroundColor(Color(hex: "#a6d17d"))
                 }
             }
-            
             Divider()
-            
-            // Progres Langkah (Sederhana, teks saja)
             HStack {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Daily Steps")
@@ -136,12 +138,10 @@ struct TaskAndStepsProgressCard: View {
                         .foregroundColor(.black.opacity(0.8))
                 }
                 Spacer()
-                Image(systemName: "figure.walk.circle.fill") // Ikon lebih besar dan berwarna
+                Image(systemName: "figure.walk.circle.fill")
                     .font(.largeTitle)
                     .foregroundColor(Color(hex: "#91bef8"))
             }
-            
-            // Pesan motivator
             if taskCompletionPercentage < 100 {
                 Divider()
                 HStack {
@@ -164,20 +164,21 @@ struct TaskAndStepsProgressCard: View {
                 }
             }
         }
-        .padding(25) // Padding lebih besar
+        .padding(25)
         .background(Color.white)
         .cornerRadius(20)
         .shadow(color: Color.black.opacity(0.1), radius: 5, y: 2)
     }
 }
-// MARK: - Komponen Reminder (tetap sama, sudah bagus)
+
+// MARK: - ReminderItem
 struct ReminderItem: View {
-    @Binding var task: TaskItem
+    let task: Tasks
     @ObservedObject var viewModel: ReceiverVM
     
     var body: some View {
         HStack {
-            Text(task.time)
+            Text(formatTime(task.dueTime))
                 .font(.title2.bold())
                 .foregroundColor(Color(hex: "#91bef8"))
                 .frame(width: 90, alignment: .leading)
@@ -190,7 +191,7 @@ struct ReminderItem: View {
             Spacer()
             
             Button(action: {
-                viewModel.toggleTaskCompletion(for: task.id)
+                viewModel.toggleTaskCompletion(task: task)
             }) {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.largeTitle)
@@ -205,9 +206,15 @@ struct ReminderItem: View {
         .shadow(color: Color.black.opacity(0.05), radius: 5, y: 2)
         .padding(.horizontal)
     }
-}
-// MARK: - Preview
-#Preview {
-    ReceiverDashboardView(viewModel: ReceiverVM())
+    
+    private func formatTime(_ date: Date?) -> String {
+        guard let date = date else { return "--:--" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
 }
 
+#Preview {
+    ReceiverDashboardView()
+}
