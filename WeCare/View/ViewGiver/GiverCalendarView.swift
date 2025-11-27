@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct GiverCalendarView: View {
-    @StateObject var usersVM = UsersTableViewModel(familyId: 1)
+    @StateObject var usersVM = UsersTableViewModel()
     @StateObject var vm = GiverCalendarVM()
     
     var body: some View {
@@ -34,9 +34,13 @@ struct GiverCalendarView: View {
         .sheet(isPresented: $vm.showingEditAgenda) {
             vmEditAgendaSheet
         }
-        .onChange(of: usersVM.users) { newUsers in
+//        .onChange(of: usersVM.users) { newUsers in
+//            vm.updateUsers(newUsers)
+//        }
+        .onReceive(usersVM.$users) { newUsers in
             vm.updateUsers(newUsers)
         }
+
     }
     
     private var header: some View {

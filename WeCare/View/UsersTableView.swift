@@ -9,7 +9,7 @@ import SwiftUI
 
 struct UsersTableView: View {
     @StateObject private var vm = UsersTableViewModel(
-        familyId: nil
+//        familyId: nil
     )
     
     var body: some View {
