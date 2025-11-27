@@ -1,7 +1,12 @@
 import SwiftUI
+
 // MARK: - TAB 3: Health View (Vitals)
 struct ReceiverHealthView: View {
     @ObservedObject var viewModel: ReceiverVM
+    
+    // Hardcoded ID for now (Matches Dashboard)
+    private let currentUserId = 2
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -21,26 +26,32 @@ struct ReceiverHealthView: View {
                         
                         // Grid of 2x3 cards
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                            
+                            // 1. Heart Rate
                             DashboardCard(title: "Heart Rate",
                                           value: "\(viewModel.heartRate) bpm",
                                           color: "#fa6255",
                                           icon: "heart.fill")
                             
+                            // 2. Oxygen Saturation
                             DashboardCard(title: "Oxygen Sat.",
                                           value: String(format: "%.1f%%", viewModel.oxygenSaturation),
                                           color: "#91bef8",
                                           icon: "lungs.fill")
                             
+                            // 3. Steps
                             DashboardCard(title: "Steps",
                                           value: "\(viewModel.steps)",
                                           color: "#a6d17d",
                                           icon: "figure.walk")
                             
+                            // 4. Temperature
                             DashboardCard(title: "Wrist Temp.",
                                           value: String(format: "%.1f°C", viewModel.wristTemperature),
                                           color: "#fdcb46",
                                           icon: "thermometer.medium")
                             
+                            // 5. Sleep
                             DashboardCard(title: "Sleep Quality",
                                           value: String(format: "%.1f hrs", viewModel.sleepDuration),
                                           color: "#e1c7ec",
@@ -49,7 +60,7 @@ struct ReceiverHealthView: View {
                         .padding(.horizontal)
                     }
                     
-                    // MARK: - HEALTH HISTORY (Optional Chart for Steps)
+                    // MARK: - HEALTH HISTORY
                     VStack(alignment: .leading, spacing: 15) {
                         Text("Last 7 Days Steps Trend")
                             .font(.title2.bold())
@@ -63,6 +74,8 @@ struct ReceiverHealthView: View {
                     // MARK: - CALL TO ACTION BUTTON
                     Button(action: {
                         viewModel.updateHealthData()
+                        // Manual refresh trigger
+                        viewModel.fetchLatestVitals(forUserId: currentUserId)
                     }) {
                         Text("Update Latest Health Data")
                             .fontWeight(.bold)
@@ -79,15 +92,21 @@ struct ReceiverHealthView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemGray6).ignoresSafeArea())
+            .onAppear {
+                // Ensure data is fetched when this tab appears
+                viewModel.fetchLatestVitals(forUserId: currentUserId)
+            }
         }
     }
 }
+
 // MARK: - Single Dashboard Card Component
 struct DashboardCard: View {
     var title: String
     var value: String
     var color: String
     var icon: String
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -110,10 +129,12 @@ struct DashboardCard: View {
         .shadow(radius: 3)
     }
 }
-// MARK: - Health History Card (Simple Bar Chart Simulation)
+
+// MARK: - Health History Card
 struct HealthHistoryCard: View {
-    // Dummy data to simulate steps history
+    // Dummy data
     let historyData: [Int] = [4200, 5000, 3800, 7020, 6100, 5500, 4800]
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Steps History (Past 7 Days)")
@@ -123,7 +144,7 @@ struct HealthHistoryCard: View {
             HStack(alignment: .bottom, spacing: 10) {
                 ForEach(historyData.indices, id: \.self) { index in
                     let dataPoint = historyData[index]
-                    let normalizedHeight = CGFloat(dataPoint) / 100 // simple scale for bar height
+                    let normalizedHeight = CGFloat(dataPoint) / 100
                     
                     VStack {
                         Spacer()
@@ -156,6 +177,7 @@ struct HealthHistoryCard: View {
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
     }
 }
+
 // MARK: - Preview (Tidak berubah)
 #Preview {
     ReceiverHealthView(viewModel: ReceiverVM())
