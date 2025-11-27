@@ -17,7 +17,7 @@ class MedicinesViewModel: ObservableObject {
 
 
     private let db = Firestore.firestore()
-    private let collectionName = "medicines" // ganti kalau nama koleksi beda
+    private let collectionName = "Medicines" // ganti kalau nama koleksi beda
 
 
     // MARK: - Fetch all medicines

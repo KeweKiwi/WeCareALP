@@ -7,14 +7,19 @@
 
 import SwiftUI
 
+// Assuming you have a Color extension to handle hex strings (Color(hex: "#...")
+// And assuming you have definitions for Users, Medicines, AgendaItem, AgendaType, and UrgencyStatus
+// And assuming you have the ViewModel classes (UsersTableViewModel, GiverCalendarVM, MedicinesViewModel)
+
 struct GiverCalendarView: View {
     @StateObject var usersVM = UsersTableViewModel()
     @StateObject var vm = GiverCalendarVM()
-    
+    @StateObject var medicinesVM = MedicinesViewModel()
+
     var body: some View {
         ZStack {
             Color(hex: "#FDFBF8").ignoresSafeArea()
-            
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 28) {
                     header
@@ -34,15 +39,15 @@ struct GiverCalendarView: View {
         .sheet(isPresented: $vm.showingEditAgenda) {
             vmEditAgendaSheet
         }
-//        .onChange(of: usersVM.users) { newUsers in
-//            vm.updateUsers(newUsers)
-//        }
         .onReceive(usersVM.$users) { newUsers in
             vm.updateUsers(newUsers)
         }
+        .onAppear {
+            medicinesVM.fetchAllMedicines()
+        }
 
     }
-    
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Calendar")
@@ -56,7 +61,7 @@ struct GiverCalendarView: View {
         .padding(.horizontal)
         .padding(.top, 20)
     }
-    
+
     private var filterScroll: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
@@ -68,12 +73,12 @@ struct GiverCalendarView: View {
             .padding(.horizontal)
         }
     }
-    
+
     private func filterButton(user: Users?, label: String) -> some View {
         let isSelected = vm.selectedUser?.id == user?.id
 
         return Button {
-            vm.selectedUser = user
+            vm.selectedPerson = user
         } label: {
             Text(label)
                 .font(.subheadline.bold())
@@ -87,7 +92,7 @@ struct GiverCalendarView: View {
         }
     }
 
-    
+
     private var calendarCard: some View {
         VStack(spacing: 16) {
             HStack {
@@ -98,12 +103,12 @@ struct GiverCalendarView: View {
                 Button { withAnimation { vm.currentMonthOffset += 1 } } label: { Image(systemName: "chevron.right").foregroundColor(.black) }
             }
             .padding(.horizontal)
-            
+
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 12) {
                 ForEach(1...vm.daysInMonth, id: \.self) { day in
-                    let thisDate = Calendar.current.date(bySetting: .day, value: day, of: vm.currentDate) ?? vm.currentDate
+                    let thisDate = vm.dateForDay(day)
                     let isSelected = Calendar.current.isDate(thisDate, inSameDayAs: vm.selectedDate)
-                    
+
                     VStack(spacing: 4) {
                         if Calendar.current.isDateInToday(thisDate) {
                             Text("Today")
@@ -113,25 +118,25 @@ struct GiverCalendarView: View {
                             Text(" ")
                                 .font(.caption2)
                         }
-                        
+
                         ZStack {
                             Circle()
                                 .fill(vm.colorForDay(day))
                                 .frame(width: 36, height: 36)
-                            
+
                             if isSelected {
                                 Circle()
                                     .stroke(Color(hex: "#fdcb46"), lineWidth: 3)
                                     .frame(width: 44, height: 44)
                                     .shadow(color: Color(hex: "#fdcb46").opacity(0.3), radius: 4, y: 2)
                             }
-                            
+
                             if Calendar.current.isDateInToday(thisDate) {
                                 Circle()
                                     .stroke(Color(hex: "#b87cf5"), lineWidth: 2.5)
                                     .frame(width: 40, height: 40)
                             }
-                            
+
                             Text("\(day)")
                                 .font(.callout.bold())
                                 .foregroundColor(.black)
@@ -144,7 +149,7 @@ struct GiverCalendarView: View {
                 }
             }
             .padding(.horizontal)
-            
+
             HStack(spacing: 16) {
                 legendColor(color: "#a6d17d", text: "Low")
                 legendColor(color: "#91bef8", text: "Medium")
@@ -159,7 +164,7 @@ struct GiverCalendarView: View {
         .shadow(color: Color.black.opacity(0.08), radius: 8, y: 3)
         .padding(.horizontal)
     }
-    
+
     private var agendaCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -175,7 +180,7 @@ struct GiverCalendarView: View {
                         .font(.title2)
                 }
             }
-            
+
             if vm.currentAgenda.isEmpty {
                 Text("No agenda for this date.")
                     .font(.subheadline)
@@ -188,7 +193,7 @@ struct GiverCalendarView: View {
                         Button {
                             vm.selectedAgenda = item
                         } label: {
-                            agendaItem(title: item.title, time: item.time, status: item.status, owner: item.owner)
+                            agendaItem(title: item.title, time: item.time, status: item.status, owner: item.ownerName)
                         }
                         .buttonStyle(.plain)
                     }
@@ -201,14 +206,14 @@ struct GiverCalendarView: View {
         .shadow(color: Color.black.opacity(0.08), radius: 8, y: 3)
         .padding(.horizontal)
     }
-    
+
     private func legendColor(color: String, text: String) -> some View {
         HStack(spacing: 6) {
             Circle().fill(Color(hex: color)).frame(width: 10, height: 10)
             Text(text).font(.caption).foregroundColor(.gray)
         }
     }
-    
+
     private func agendaItem(title: String, time: String, status: UrgencyStatus, owner: String) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -224,7 +229,7 @@ struct GiverCalendarView: View {
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 3, y: 2)
     }
-    
+
     private func color(for status: UrgencyStatus) -> Color {
         switch status {
         case .low: return Color(hex: "#a6d17d")
@@ -235,83 +240,142 @@ struct GiverCalendarView: View {
         }
     }
     
+    // MARK: - Redesigned Add Agenda Sheet (Aesthetic and Spacing Improvements)
+
     private var vmAddAgendaSheet: some View {
-        NavigationView {
-            Form {
-                // -------------------------
-                // AGENDA TYPE PICKER
-                // -------------------------
-                Section(header: Text("Agenda Type")) {
-                    Picker("Agenda Type", selection: $vm.newAgendaType) {
-                        Text("Activity").tag(AgendaType.activity)
-                        Text("Medicine").tag(AgendaType.medicine)
-                    }
-                    .pickerStyle(.segmented)
-                }
+        // Use a ZStack with a soft background color
+        ZStack {
+            Color(hex: "#FDFBF8").ignoresSafeArea()
 
-                // -------------------------
-                // FORM FIELDS (dynamic)
-                // -------------------------
-                Section(header: Text("Agenda Details")) {
-
-                    // Title field changes depending on type
-                    if vm.newAgendaType == .medicine {
-                        TextField("Medicine Name", text: $vm.newAgendaTitle)
-                    } else {
-                        TextField("Activity Title", text: $vm.newAgendaTitle)
-                    }
-
-                    TextField("Description", text: $vm.newAgendaDescription)
-
-                    DatePicker("Select Time",
-                               selection: $vm.newAgendaTimeDate,
-                               displayedComponents: .hourAndMinute)
-                        .datePickerStyle(.wheel)
-                }
-
-                // -------------------------
-                // OWNER
-                // -------------------------
-                Section(header: Text("For Who")) {
-                    Picker("Select Person", selection: $vm.newAgendaOwner) {
-                        Text("Choose Person").tag(nil as Users?)
-                        ForEach(vm.users) { user in
-                            Text(user.fullName).tag(Optional(user))
-                        }
-                    }
-                }
-
-                // -------------------------
-                // URGENCY
-                // -------------------------
-                Section(header: Text("Urgency Status")) {
-                    Picker("Status", selection: $vm.newAgendaStatus) {
-                        Text("Low").tag(UrgencyStatus.low)
-                        Text("Medium").tag(UrgencyStatus.medium)
-                        Text("High").tag(UrgencyStatus.high)
-                        Text("Critical").tag(UrgencyStatus.critical)
-                    }
-                    .pickerStyle(.segmented)
-                }
-            }
-            .navigationTitle("Add Agenda")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+            VStack(spacing: 0) {
+                // Custom Navigation Bar / Header
+                HStack {
+                    Button("Cancel") { vm.showingAddAgenda = false }
+                        .foregroundColor(Color(hex: "#fa6255"))
+                    Spacer()
+                    Text("Add Agenda")
+                        .font(.headline.bold())
+                    Spacer()
                     Button("Save") {
                         vm.saveNewAgenda()
                         vm.showingAddAgenda = false
                     }
-                    .disabled(vm.newAgendaTitle.isEmpty || vm.newAgendaOwner == nil)
+                    .foregroundColor(Color(hex: "#b87cf5"))
+                    .disabled(
+                        vm.newAgendaOwner == nil ||
+                        (vm.newAgendaType == .activity && vm.newAgendaTitle.isEmpty) ||
+                        (vm.newAgendaType == .medicine && vm.selectedMedicine == nil)
+                    )
                 }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { vm.showingAddAgenda = false }
+                .padding()
+                .background(Color.white)
+                .shadow(color: Color.black.opacity(0.05), radius: 2, y: 2)
+
+                ScrollView(showsIndicators: false) {
+                    // Use generous vertical spacing between sections
+                    VStack(alignment: .leading, spacing: 30) {
+                        
+                        // 1. AGENDA TYPE
+                        sectionCard(title: "Agenda Type") {
+                            Picker("Agenda Type", selection: $vm.newAgendaType) {
+                                Text("Activity").tag(AgendaType.activity)
+                                Text("Medicine").tag(AgendaType.medicine)
+                            }
+                            .pickerStyle(.segmented)
+                            .background(Color(hex: "#fff9e6")) // Light yellow background for this specific picker
+                            .cornerRadius(10)
+                            // Remove extra padding here, let the card padding handle it
+                        }
+                        
+                        // 2. AGENDA DETAILS
+                        sectionCard(title: "Agenda Details") {
+                            VStack(spacing: 12) { // Increased spacing for form fields
+                                // Title field changes depending on type
+                                Group {
+                                    if vm.newAgendaType == .medicine {
+                                        Picker("Select Medicine", selection: $vm.selectedMedicine) {
+                                            Text("Choose Medicine").tag(nil as Medicines?)
+
+                                            ForEach(medicinesVM.medicines, id: \.self) { med in
+                                                Text(med.medicineName).tag(Optional(med))
+                                            }
+                                        }
+                                    } else {
+                                        TextField("Activity Title", text: $vm.newAgendaTitle)
+                                    }
+                                }
+                                .padding(.horizontal, 10)
+                                
+                                Divider()
+                                
+                                TextField("Description (Optional)", text: $vm.newAgendaDescription)
+                                    .padding(.horizontal, 10)
+                                
+                                Divider()
+
+                                // Use a standard DatePicker style for cleaner look (not wheel in this field)
+                                HStack {
+                                    Text("Select Time")
+                                    Spacer()
+                                    DatePicker("", selection: $vm.newAgendaTimeDate, displayedComponents: .hourAndMinute)
+                                        .labelsHidden()
+                                }
+                                .padding(.horizontal, 10)
+                            }
+                        }
+                        
+                        // 3. OWNER
+                        sectionCard(title: "For Who") {
+                            Picker("Select Person", selection: $vm.newAgendaOwner) {
+                                Text("Choose Person").tag(nil as Users?)
+                                ForEach(vm.users) { user in
+                                    Text(user.fullName).tag(Optional(user))
+                                }
+                            }
+                        }
+                        
+                        // 4. URGENCY
+                        sectionCard(title: "Urgency Status") {
+                            Picker("Status", selection: $vm.newAgendaStatus) {
+                                Text("Low").tag(UrgencyStatus.low)
+                                Text("Medium").tag(UrgencyStatus.medium)
+                                Text("High").tag(UrgencyStatus.high)
+                                Text("Critical").tag(UrgencyStatus.critical)
+                            }
+                            .pickerStyle(.segmented)
+                            .background(Color(hex: "#fff9e6")) // Light yellow background for this specific picker
+                            .cornerRadius(10)
+                        }
+                        
+                    }
+                    .padding(.horizontal) // Padding for the whole content
+                    .padding(.top, 20) // Spacing from the header
+                    .padding(.bottom, 40) // Extra padding for scroll safety
                 }
             }
         }
+        .presentationDetents([.large]) // Ensure it takes up full screen height
     }
 
-    
+    // Helper view to encapsulate section styling (like agendaCard)
+    private func sectionCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.subheadline.bold())
+                .foregroundColor(.black)
+                .padding(.leading, 10)
+            
+            VStack {
+                content()
+            }
+            .padding(15)
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.08), radius: 6, y: 3)
+        }
+    }
+
+
     private var vmEditAgendaSheet: some View {
         NavigationView {
             Form {
@@ -357,11 +421,11 @@ struct GiverCalendarView: View {
         }
     }
 
-    
+
     private func agendaDetailView(_ agenda: AgendaItem) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(agenda.title).font(.title2.bold())
-            Text("By \(agenda.owner)").font(.subheadline).foregroundColor(Color(hex: "#b87cf5"))
+            Text("By \(agenda.ownerName)").font(.subheadline).foregroundColor(Color(hex: "#b87cf5"))
 
             HStack {
                 Text("⏰ \(agenda.time)")
@@ -382,10 +446,10 @@ struct GiverCalendarView: View {
             Button {
                 // 1. Close the detail sheet
                 vm.selectedAgenda = nil
-                
+
                 // 2. Prepare edit data
                 vm.startEditing(agenda)
-                
+
                 // 3. Open edit sheet AFTER the detail sheet closes
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     vm.showingEditAgenda = true
@@ -432,4 +496,3 @@ struct GiverCalendarView: View {
 #Preview {
     GiverCalendarView()
 }
-
