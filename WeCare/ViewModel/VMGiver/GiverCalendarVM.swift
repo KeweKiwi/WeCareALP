@@ -31,6 +31,10 @@ final class GiverCalendarVM: ObservableObject {
     @Published var newAgendaType: AgendaType = .activity
     @Published var selectedMedicine: Medicines? = nil
     @Published var newAgendaMedicine: Medicines? = nil
+    
+    // ALERT for adding agenda in the past
+    @Published var showPastDateAlert = false
+    private var confirmSavePastAgenda = false
 
     // DETAIL
     @Published var selectedAgenda: AgendaItem? = nil
@@ -187,6 +191,33 @@ final class GiverCalendarVM: ObservableObject {
     // MARK: - NEW AGENDA
 
     func saveNewAgenda() {
+        let calendar = Calendar.current
+        let now = Date()
+
+        let startOfToday = calendar.startOfDay(for: now)
+        let startOfAgendaDay = calendar.startOfDay(for: selectedDate)
+
+        // 1. If full day is in the past
+        if startOfAgendaDay < startOfToday && !confirmSavePastAgenda {
+            showPastDateAlert = true
+            return
+        }
+
+        // 2. If same day, check the TIME
+        if calendar.isDateInToday(selectedDate) {
+            let chosenDateTime = calendar.date(
+                bySettingHour: calendar.component(.hour, from: newAgendaTimeDate),
+                minute: calendar.component(.minute, from: newAgendaTimeDate),
+                second: 0,
+                of: selectedDate
+            ) ?? newAgendaTimeDate
+
+            if chosenDateTime < now && !confirmSavePastAgenda {
+                showPastDateAlert = true
+                return
+            }
+        }
+
         guard let owner = newAgendaOwner else { return }
 
         let f = DateFormatter()
@@ -206,7 +237,7 @@ final class GiverCalendarVM: ObservableObject {
             date: dateKey,
             status: newAgendaStatus,
             type: newAgendaType,
-            ownerId: owner.id,              // Firestore user doc ID
+            ownerId: owner.id,
             ownerName: owner.fullName,
             medicineId: selectedMedicine?.medicineId,
             medicineName: selectedMedicine?.medicineName,
@@ -219,8 +250,17 @@ final class GiverCalendarVM: ObservableObject {
         ownerAgenda[dateKey] = dayList
         agendaData[owner.fullName] = ownerAgenda
 
+        // Reset fields & state
+        confirmSavePastAgenda = false
         resetNewAgendaFields()
     }
+    
+    func confirmSavingPastAgenda() {
+        confirmSavePastAgenda = true
+        showPastDateAlert = false
+        saveNewAgenda()
+    }
+
 
     func resetNewAgendaFields() {
         newAgendaTitle = ""
@@ -255,6 +295,23 @@ final class GiverCalendarVM: ObservableObject {
         guard let original = editAgendaOriginal else { return }
         guard let owner = editAgendaOwner else { return }
 
+        let calendar = Calendar.current
+        let now = Date()
+        // 1. Check time
+        if calendar.isDateInToday(selectedDate) {
+            let chosenDateTime = calendar.date(
+                bySettingHour: calendar.component(.hour, from: editAgendaTimeDate),
+                minute: calendar.component(.minute, from: editAgendaTimeDate),
+                second: 0,
+                of: selectedDate
+            ) ?? editAgendaTimeDate
+
+            if chosenDateTime < now && !confirmSavePastAgenda {
+                showPastDateAlert = true
+                return
+            }
+        }
+        
         let key = dateKey(from: selectedDate)
 
         let f = DateFormatter()
