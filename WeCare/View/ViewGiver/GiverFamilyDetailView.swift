@@ -1,29 +1,38 @@
 import SwiftUI
 
+
 struct GiverFamilyDetailView: View {
     let person: GiverPersonCardViewData
     
+    @EnvironmentObject var authVM: AuthViewModel
+    @StateObject private var vm: GiverFamilyViewModel
+    
     @State private var isCodeHidden: Bool = true
+    @State private var isEditing: Bool = false
+    @State private var selectedMemberIds: Set<String> = []
     
     init(person: GiverPersonCardViewData) {
         self.person = person
+        _vm = StateObject(wrappedValue: GiverFamilyViewModel(familyCode: person.familyCode))
     }
     
+    // Hide or reveal family code
     private var displayFamilyCode: String {
-        guard let code = person.familyCode, !code.isEmpty else {
-            return "No family code"
-        }
-        if isCodeHidden {
-            return String(repeating: "•", count: 6)
-        }
-        return code
+        guard let code = person.familyCode, !code.isEmpty else { return "No family code" }
+        return isCodeHidden ? String(repeating: "•", count: code.count) : code
+    }
+    
+    // Check if current user is FIRST member (admin)
+    private var isCurrentUserAdmin: Bool {
+        guard let userId = authVM.currentUser?.userId else { return false }
+        return vm.members.first?.userId == userId
     }
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(spacing: 20) {
                 
-                // Header Card
+                // MARK: Header Card
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(spacing: 14) {
                         GiverAvatarView(url: person.avatarURL, size: 60)
@@ -41,7 +50,7 @@ struct GiverFamilyDetailView: View {
                         Spacer()
                     }
                     
-                    // Family Code Section
+                    // MARK: Family Code
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Family Code")
                             .font(.caption)
@@ -53,7 +62,6 @@ struct GiverFamilyDetailView: View {
                             Text(displayFamilyCode)
                                 .font(.system(size: 22, weight: .medium, design: .rounded))
                                 .monospacedDigit()
-                                .foregroundColor(.primary)
                             
                             Spacer()
                             
@@ -63,9 +71,8 @@ struct GiverFamilyDetailView: View {
                                 }
                             } label: {
                                 Image(systemName: isCodeHidden ? "eye.slash.fill" : "eye.fill")
-                                    .font(.system(size: 16))
                                     .foregroundColor(.blue)
-                                    .frame(width: 40, height: 40)
+                                    .padding(8)
                                     .background(Color.blue.opacity(0.1))
                                     .clipShape(Circle())
                             }
@@ -74,14 +81,17 @@ struct GiverFamilyDetailView: View {
                     .padding(16)
                     .background(Color(.systemGray6))
                     .cornerRadius(12)
+                    
                 }
                 .padding(20)
                 .background(Color(.systemBackground))
                 .cornerRadius(20)
-                .shadow(color: Color.black.opacity(0.05), radius: 10, y: 4)
+                .shadow(color: .black.opacity(0.05), radius: 10, y: 4)
                 
-                // Family Members Section
+                // MARK: Family Members Section
                 VStack(alignment: .leading, spacing: 14) {
+                    
+                    // Header row
                     HStack {
                         Text("Family Members")
                             .font(.title3)
@@ -89,7 +99,7 @@ struct GiverFamilyDetailView: View {
                         
                         Spacer()
                         
-                        Text("\(person.familyMembers?.count ?? 0)")
+                        Text("\(vm.members.count)")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 10)
@@ -98,98 +108,186 @@ struct GiverFamilyDetailView: View {
                             .clipShape(Capsule())
                     }
                     
-                    if let members = person.familyMembers, !members.isEmpty {
-                        VStack(spacing: 10) {
-                            ForEach(Array(members.enumerated()), id: \.offset) { index, member in
-                                MemberRowView(
-                                    name: member,
-                                    isAdmin: index == 0 // Contoh: member pertama adalah admin
-                                )
-                            }
+                    // Loading
+                    if vm.isLoading {
+                        HStack {
+                            Spacer()
+                            ProgressView("Loading members…")
+                                .padding(.vertical, 24)
+                            Spacer()
                         }
-                    } else {
+                    }
+                    
+                    // Error
+                    else if let err = vm.errorMessage {
+                        VStack(spacing: 6) {
+                            Text("Failed to load family members")
+                                .font(.body).bold()
+                            Text(err)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.vertical, 30)
+                    }
+                    
+                    // Empty
+                    else if vm.members.isEmpty {
                         VStack(spacing: 8) {
                             Image(systemName: "person.2.slash")
                                 .font(.system(size: 40))
                                 .foregroundColor(.secondary.opacity(0.5))
                             
                             Text("No family members yet")
-                                .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
                     }
+                    
+                    // Members List
+                    else {
+                        VStack(spacing: 10) {
+                            ForEach(vm.members) { member in
+                                MemberRowView(
+                                    name: member.name,
+                                    isAdmin: member.isAdmin,
+                                    isSelectable: isEditing && !member.isAdmin,
+                                    isSelected: selectedMemberIds.contains(member.id),
+                                    onTap: {
+                                        guard isEditing, !member.isAdmin else { return }
+                                        if selectedMemberIds.contains(member.id) {
+                                            selectedMemberIds.remove(member.id)
+                                        } else {
+                                            selectedMemberIds.insert(member.id)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        
+                        // Delete button (only when editing & items selected)
+                        if isEditing && !selectedMemberIds.isEmpty {
+                            Button(role: .destructive) {
+                                let idsToDelete = vm.members
+                                    .filter { selectedMemberIds.contains($0.id) && !$0.isAdmin }
+                                    .map { $0.id }
+                                
+                                vm.deleteMembers(withIds: idsToDelete)
+                                selectedMemberIds.removeAll()
+                                isEditing = false
+                            } label: {
+                                Label("Remove Selected Members", systemImage: "trash")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.red)
+                            .padding(.top, 8)
+                        }
+                    }
+                    
                 }
                 .padding(20)
                 .background(Color(.systemBackground))
                 .cornerRadius(20)
-                .shadow(color: Color.black.opacity(0.05), radius: 10, y: 4)
+                .shadow(color: .black.opacity(0.05), radius: 10, y: 4)
                 
-                Spacer(minLength: 20)
             }
             .padding()
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Family Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // Only admin can edit
+            if isCurrentUserAdmin && !vm.isLoading {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        withAnimation {
+                            if isEditing { selectedMemberIds.removeAll() }
+                            isEditing.toggle()
+                        }
+                    } label: {
+                        Text(isEditing ? "Done" : "Edit")
+                    }
+                }
+            }
+        }
+        .onAppear { vm.load() }
     }
 }
 
+
+
+
 // MARK: - Member Row View
+
+
 struct MemberRowView: View {
     let name: String
     let isAdmin: Bool
+    let isSelectable: Bool
+    let isSelected: Bool
+    let onTap: () -> Void
     
-    private var initial: String {
-        name.first.map { String($0).uppercased() } ?? "?"
-    }
+    private var initial: String { String(name.first ?? "?").uppercased() }
     
     private var avatarColor: Color {
-        let colors: [Color] = [.blue, .purple, .pink, .orange, .green, .red]
-        let index = abs(name.hashValue) % colors.count
-        return colors[index]
+        let base: [Color] = [.blue, .purple, .pink, .orange, .green, .red]
+        return base[abs(name.hashValue) % base.count]
     }
     
     var body: some View {
-        HStack(spacing: 14) {
-            // Avatar dengan warna solid
-            ZStack {
-                Circle()
-                    .fill(avatarColor.opacity(0.15))
+        Button(action: onTap) {
+            HStack(spacing: 14) {
                 
-                Text(initial)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(avatarColor)
+                // Avatar
+                ZStack {
+                    Circle()
+                        .fill(avatarColor.opacity(0.15))
+                    
+                    Text(initial)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(avatarColor)
+                }
+                .frame(width: 44, height: 44)
+                
+                // Name
+                Text(name)
+                    .font(.body)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                // Selection mode
+                if isSelectable {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(isSelected ? .blue : .secondary)
+                }
+                // Admin badge
+                else if isAdmin {
+                    Text("Admin")
+                        .font(.caption).bold()
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 10)
+                        .foregroundColor(.white)
+                        .background(Color.blue)
+                        .clipShape(Capsule())
+                }
             }
-            .frame(width: 44, height: 44)
-            
-            // Name
-            Text(name)
-                .font(.body)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
-            
-            Spacer()
-            
-            // Admin Badge
-            if isAdmin {
-                Text("Admin")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.blue)
-                    .clipShape(Capsule())
-            }
+            .padding(14)
+            .background(Color(.systemGray6).opacity(0.5))
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color(.systemGray4).opacity(0.5), lineWidth: 0.5)
+            )
         }
-        .padding(14)
-        .background(Color(.systemGray6).opacity(0.5))
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color(.systemGray4).opacity(0.5), lineWidth: 0.5)
-        )
+        .buttonStyle(.plain)
     }
 }
+
+
+
+
+

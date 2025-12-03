@@ -200,7 +200,7 @@ struct LoginView: View {
 }
 
 
-// MARK: - Preview Flow (Login -> Persons) khusus untuk Canvas
+// MARK: - Preview Flow (Login -> Main Tab) khusus untuk Canvas
 struct LoginPreviewFlow: View {
     @StateObject private var authVM = AuthViewModel()
     @StateObject private var coordinator = NavigationCoordinator()
@@ -208,8 +208,8 @@ struct LoginPreviewFlow: View {
     var body: some View {
         Group {
             if authVM.isLoggedIn {
-                // ✅ Setelah login sukses → lihat GiverPersonListView
-                GiverPersonListView()
+                // ✅ Setelah login sukses → masuk ke TabView (Persons + Calendar)
+                GiverMainTabView()
                     .environmentObject(coordinator)
                     .environmentObject(authVM)
             } else {
