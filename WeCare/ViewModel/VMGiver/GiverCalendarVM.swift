@@ -66,68 +66,6 @@ final class GiverCalendarVM: ObservableObject {
         self.persons = newUsers
     }
 
-//    // MARK: INIT
-//    init() {
-//        loadDummyUsers()
-//        seedDemoAgenda()
-//    }
-
-//    func loadDummyUsers() {
-//        persons = [
-//            Users(id: "1", data: [
-//                "user_id": 11,
-//                "family_id": 1,
-//                "full_name": "Nenek Siti",
-//                "email": "",
-//                "phone_number": "",
-//                "password": "",
-//                "role": "Grandmother",
-//                "gender": "Female",
-//                "is_admin": false,
-//                "profile_image_url": "",
-//            ]),
-//            Users(id: "2", data: [
-//                "user_id": 22,
-//                "family_id": 1,
-//                "full_name": "Kakek Budi",
-//                "email": "",
-//                "phone_number": "",
-//                "password": "",
-//                "role": "Grandfather",
-//                "gender": "Male",
-//                "is_admin": false,
-//                "profile_image_url": "",
-//            ])
-//        ]
-//    }
-//
-//    func seedDemoAgenda() {
-//        agendaData = [
-//            "Nenek Siti": [
-//                "2025-11-13": [
-//                    .init(
-//                        title: "Check blood pressure",
-//                        description: "Bring BP meter",
-//                        time: "08:00 AM",
-//                        status: .low,
-//                        owner: "Nenek Siti"
-//                    )
-//                ]
-//            ],
-//            "Kakek Budi": [
-//                "2025-11-03": [
-//                    .init(
-//                        title: "Leg therapy",
-//                        description: "Clinic physio session",
-//                        time: "09:00 AM",
-//                        status: .high,
-//                        owner: "Kakek Budi"
-//                    )
-//                ]
-//            ]
-//        ]
-//    }
-
     // MARK: - COMPUTED PROPERTIES
 
     var currentDate: Date {
@@ -187,7 +125,6 @@ final class GiverCalendarVM: ObservableObject {
         return false
     }
 
-
     // MARK: - NEW AGENDA
 
     func saveNewAgenda() {
@@ -201,21 +138,6 @@ final class GiverCalendarVM: ObservableObject {
         if startOfAgendaDay < startOfToday && !confirmSavePastAgenda {
             showPastDateAlert = true
             return
-        }
-
-        // 2. If same day, check the TIME
-        if calendar.isDateInToday(selectedDate) {
-            let chosenDateTime = calendar.date(
-                bySettingHour: calendar.component(.hour, from: newAgendaTimeDate),
-                minute: calendar.component(.minute, from: newAgendaTimeDate),
-                second: 0,
-                of: selectedDate
-            ) ?? newAgendaTimeDate
-
-            if chosenDateTime < now && !confirmSavePastAgenda {
-                showPastDateAlert = true
-                return
-            }
         }
 
         guard let owner = newAgendaOwner else { return }
@@ -239,9 +161,9 @@ final class GiverCalendarVM: ObservableObject {
             type: newAgendaType,
             ownerId: owner.id,
             ownerName: owner.fullName,
-            medicineId: selectedMedicine?.medicineId,
-            medicineName: selectedMedicine?.medicineName,
-            medicineImage: selectedMedicine?.medicineImage
+            medicineId: newAgendaType == .medicine ? selectedMedicine?.medicineId : nil,
+            medicineName: newAgendaType == .medicine ? selectedMedicine?.medicineName : nil,
+            medicineImage: newAgendaType == .medicine ? selectedMedicine?.medicineImage : nil
         )
 
         var ownerAgenda = agendaData[owner.fullName] ?? [:]
@@ -269,13 +191,27 @@ final class GiverCalendarVM: ObservableObject {
         newAgendaStatus = .low
         newAgendaTimeDate = Date()
         newAgendaType = .activity
+        selectedMedicine = nil
+        newAgendaMedicine = nil
     }
 
     // MARK: - EDITING
 
     func startEditing(_ agenda: AgendaItem) {
         editAgendaOriginal = agenda
-        editAgendaTitle = agenda.title
+        
+        // If editing medicine agenda → use medicineName as the title
+        if agenda.medicineName != nil {
+            editAgendaTitle = agenda.medicineName ?? ""
+        } else {
+            // activity
+            if agenda.title.starts(with: "💊 ") {
+                editAgendaTitle = String(agenda.title.dropFirst(2))
+            } else {
+                editAgendaTitle = agenda.title
+            }
+        }
+
         editAgendaDescription = agenda.description
 
         let f = DateFormatter()
@@ -285,32 +221,30 @@ final class GiverCalendarVM: ObservableObject {
         editAgendaStatus = agenda.status
         editAgendaOwner = persons.first { $0.fullName == agenda.ownerName }
 
-        // Attempt detect type
-        editAgendaType = agenda.title.starts(with: "💊") ? .medicine : .activity
+        // FIX: detect type correctly
+        editAgendaType = agenda.medicineId != nil ? .medicine : .activity
+
+        // FIX: restore medicine selection
+        if editAgendaType == .medicine {
+            selectedMedicine = Medicines(
+                id: agenda.id,
+                data: [
+                    "medicine_id": agenda.medicineId ?? 0,
+                    "medicine_name": agenda.medicineName ?? "",
+                    "medicine_image": agenda.medicineImage ?? ""
+                ]
+            )
+        } else {
+            selectedMedicine = nil
+        }
 
         showingEditAgenda = true
     }
 
+
     func saveEditedAgenda() {
         guard let original = editAgendaOriginal else { return }
         guard let owner = editAgendaOwner else { return }
-
-        let calendar = Calendar.current
-        let now = Date()
-        // 1. Check time
-        if calendar.isDateInToday(selectedDate) {
-            let chosenDateTime = calendar.date(
-                bySettingHour: calendar.component(.hour, from: editAgendaTimeDate),
-                minute: calendar.component(.minute, from: editAgendaTimeDate),
-                second: 0,
-                of: selectedDate
-            ) ?? editAgendaTimeDate
-
-            if chosenDateTime < now && !confirmSavePastAgenda {
-                showPastDateAlert = true
-                return
-            }
-        }
         
         let key = dateKey(from: selectedDate)
 
@@ -320,7 +254,9 @@ final class GiverCalendarVM: ObservableObject {
 
         let updatedItem = AgendaItem(
             id: original.id,
-            title: editAgendaType == .medicine ? "💊 \(editAgendaTitle)" : editAgendaTitle,
+            title: editAgendaType == .medicine ?
+                    "💊 \(selectedMedicine?.medicineName ?? "")"
+                    : editAgendaTitle,
             description: editAgendaDescription,
             time: timeString,
             date: key,
@@ -328,9 +264,9 @@ final class GiverCalendarVM: ObservableObject {
             type: editAgendaType,
             ownerId: owner.id,
             ownerName: owner.fullName,
-            medicineId: selectedMedicine?.medicineId,
-            medicineName: selectedMedicine?.medicineName,
-            medicineImage: selectedMedicine?.medicineImage
+            medicineId: editAgendaType == .medicine ? selectedMedicine?.medicineId : nil,
+            medicineName: editAgendaType == .medicine ? selectedMedicine?.medicineName : nil,
+            medicineImage: editAgendaType == .medicine ? selectedMedicine?.medicineImage : nil
         )
 
         // Remove old agenda
