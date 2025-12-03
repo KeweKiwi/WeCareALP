@@ -4,7 +4,6 @@
 //
 //  Created by student on 24/11/25.
 //
-
 import Foundation
 import Combine
 
@@ -15,9 +14,12 @@ final class VolunteerConfirmationVM: ObservableObject {
     @Published var messages: [ChatMessage]
     @Published var newMessage: String = ""
     
-    // NEW: Task completion & tip
+    // Task completion & tip
     @Published var isTaskCompleted: Bool = false
     @Published var givenTipAmount: String? = nil   // nil = tidak ada tip
+    
+    // ⭐ NEW: rating bintang (prototype only, tidak di-store ke backend)
+    @Published var rating: Int? = nil              // nil = belum ada rating
     
     init(volunteer: Volunteer) {
         self.volunteer = volunteer
@@ -58,10 +60,21 @@ final class VolunteerConfirmationVM: ObservableObject {
         newMessage = ""
     }
     
-    /// Dipanggil setelah caregiver menandai tugas selesai dan (opsional) memberi tip
+    /// DIPERTAHANKAN: versi lama, tanpa rating (misal dipakai di tempat lain)
     func completeTask(withTip tip: String?) {
+        applyCompletionState(tip: tip, rating: nil)
+    }
+    
+    /// NEW: dipakai saat caregiver selesai dan memberi tip + rating bintang
+    func completeTask(withTip tip: String?, rating: Int) {
+        applyCompletionState(tip: tip, rating: rating)
+    }
+    
+    /// Satu pintu untuk set state selesai
+    private func applyCompletionState(tip: String?, rating: Int?) {
         isTaskCompleted = true
         givenTipAmount = tip
+        self.rating = rating
     }
     
     // MARK: - Helpers
