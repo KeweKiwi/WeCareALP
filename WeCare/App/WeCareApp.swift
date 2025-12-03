@@ -24,13 +24,18 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct WeCareApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
-
+    
     var body: some Scene {
         WindowGroup {
-            GiverCalendarView()
+            RootView()   // ⬅️ use your RootView here
         }
     }
 }
+
+
+
+
+
 
 
 
