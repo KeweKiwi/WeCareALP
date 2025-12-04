@@ -466,105 +466,100 @@ struct GiverCalendarView: View {
     }
 
     private func agendaDetailView(_ agenda: AgendaItem) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        ScrollView {   // ← FIX: ensures image fully appears
+            VStack(alignment: .leading, spacing: 16) {
 
-            // MARK: - Medicine Image (only if exists)
-            if let imageURL = agenda.medicineImage,
-               let url = URL(string: imageURL) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: 200)
+                // MARK: - Medicine Image (only if exists)
+                if let imageURL = agenda.medicineImage,
+                   let url = URL(string: imageURL) {
 
-                    case .success(let img):
-                        img
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 200)
-                            .cornerRadius(16)
-                            .shadow(radius: 6)
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: 200)
 
-                    case .failure(_):
-                        Image(systemName: "photo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 150)
-                            .foregroundColor(.gray.opacity(0.5))
+                        case .success(let img):
+                            img
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxWidth: .infinity, maxHeight: 220)
+                                .cornerRadius(16)
+                                .shadow(radius: 6)
+                                .padding(.bottom, 8)
 
-                    @unknown default:
-                        EmptyView()
+                        case .failure:
+                            Image(systemName: "photo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxWidth: .infinity, maxHeight: 150)
+                                .foregroundColor(.gray.opacity(0.5))
+                                .padding(.bottom, 8)
+
+                        @unknown default:
+                            EmptyView()
+                        }
                     }
                 }
-                .padding(.bottom, 4)
-            }
 
-            // MARK: - Title
-            Text(agenda.title)
-                .font(.title2.bold())
+                Text(agenda.title)
+                    .font(.title2.bold())
 
-            Text("By \(agenda.ownerName)")
-                .font(.subheadline)
-                .foregroundColor(Color(hex: "#b87cf5"))
+                Text("By \(agenda.ownerName)")
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "#b87cf5"))
 
-            // MARK: - Time + Status
-            HStack {
-                Text("⏰ \(agenda.time)")
+                HStack {
+                    Text("⏰ \(agenda.time)")
+                    Spacer()
+                    Text(agenda.status.rawValue.capitalized)
+                        .font(.subheadline.bold())
+                        .foregroundColor(color(for: agenda.status))
+                }
+
+                Divider()
+
+                Text(agenda.description.isEmpty ? "No description provided." : agenda.description)
+                    .font(.body)
+                    .padding(.top, 8)
+
                 Spacer()
-                Text(agenda.status.rawValue.capitalized)
-                    .font(.subheadline.bold())
-                    .foregroundColor(color(for: agenda.status))
-            }
 
-            Divider()
-
-            // MARK: - Description
-            Text(agenda.description.isEmpty ? "No description provided." : agenda.description)
-                .font(.body)
-                .padding(.top, 8)
-
-            Spacer()
-
-            // MARK: - Edit Button
-            Button {
-                vm.selectedAgenda = nil
-                vm.startEditing(agenda)
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    vm.showingEditAgenda = true
+                Button {
+                    vm.selectedAgenda = nil
+                    vm.startEditing(agenda)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        vm.showingEditAgenda = true
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "square.and.pencil")
+                        Text("Edit Agenda").bold()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(hex: "#b87cf5").opacity(0.15))
+                    .cornerRadius(12)
                 }
-            } label: {
-                HStack {
-                    Image(systemName: "square.and.pencil")
-                    Text("Edit Agenda").bold()
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color(hex: "#b87cf5").opacity(0.15))
-                .cornerRadius(12)
-            }
 
-            // MARK: - Delete Button
-            Button(role: .destructive) {
-                vm.deleteAgenda(agenda)
-                vm.selectedAgenda = nil
-            } label: {
-                HStack {
-                    Image(systemName: "trash")
-                    Text("Delete Agenda").bold()
+                Button(role: .destructive) {
+                    vm.deleteAgenda(agenda)
+                    vm.selectedAgenda = nil
+                } label: {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text("Delete Agenda").bold()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.red.opacity(0.12))
+                    .cornerRadius(12)
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.red.opacity(0.12))
-                .cornerRadius(12)
             }
-
+            .padding()
         }
-        .padding()
         .presentationDetents([.medium, .large])
     }
-
-
 
     private func formattedSelectedDate(_ date: Date) -> String {
         let f = DateFormatter()

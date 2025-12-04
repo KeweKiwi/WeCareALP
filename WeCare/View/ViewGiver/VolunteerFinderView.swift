@@ -4,7 +4,7 @@
 //
 //  Created by student on 19/11/25.
 // INGAT: VIEW INI AKAN MUNCUL SETELAH DI DALAM KONTAINER DETAIL LANSIA KITA BISA MINTOL FIND VOLUNTEER
-// yg masih kurang: history chat || pov sebegai pengaju menjadi volunteer
+// yg masih kurang:  pov sebegai pengaju menjadi volunteer
 // yg dilakukan saat ada database / diakhir2: tampilan maps itu jaraknya harus sama dengan person card. Selesai kasih tip lgsg navigate ke halaman utama
 
 import SwiftUI
