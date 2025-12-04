@@ -41,6 +41,7 @@ final class GiverCalendarVM: ObservableObject {
     @Published var showingAgendaDetail = false
 
     // EDIT AGENDA
+    @Published var isTitleEditable: Bool = true
     @Published var showingEditAgenda = false
     @Published var editAgendaOriginal: AgendaItem? = nil
     @Published var editAgendaTitle = ""
@@ -199,12 +200,14 @@ final class GiverCalendarVM: ObservableObject {
 
     func startEditing(_ agenda: AgendaItem) {
         editAgendaOriginal = agenda
-        
+
+        // Disable editing if it's medicine
+        isTitleEditable = (agenda.medicineName == nil)
+
         // If editing medicine agenda → use medicineName as the title
         if agenda.medicineName != nil {
             editAgendaTitle = agenda.medicineName ?? ""
         } else {
-            // activity
             if agenda.title.starts(with: "💊 ") {
                 editAgendaTitle = String(agenda.title.dropFirst(2))
             } else {
@@ -221,10 +224,9 @@ final class GiverCalendarVM: ObservableObject {
         editAgendaStatus = agenda.status
         editAgendaOwner = persons.first { $0.fullName == agenda.ownerName }
 
-        // FIX: detect type correctly
         editAgendaType = agenda.medicineId != nil ? .medicine : .activity
 
-        // FIX: restore medicine selection
+        // Restore medicine selection
         if editAgendaType == .medicine {
             selectedMedicine = Medicines(
                 id: agenda.id,

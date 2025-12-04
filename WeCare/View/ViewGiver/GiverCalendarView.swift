@@ -7,9 +7,6 @@
 
 import SwiftUI
 
-// Assuming you have a Color extension to handle hex strings (Color(hex: "#...")
-// And assuming you have definitions for Users, Medicines, AgendaItem, AgendaType, and UrgencyStatus
-// And assuming you have the ViewModel classes (UsersTableViewModel, GiverCalendarVM, MedicinesViewModel)
 
 struct GiverCalendarView: View {
     @StateObject var usersVM = UsersTableViewModel()
@@ -205,7 +202,15 @@ struct GiverCalendarView: View {
                         Button {
                             vm.selectedAgenda = item
                         } label: {
-                            agendaItem(title: item.title, time: item.time, status: item.status, owner: item.ownerName)
+                            let displayTitle =
+                                item.medicineId != nil
+                                ? "💊 \(item.medicineName ?? "Unknown Medicine")"
+                                : item.title
+
+                            agendaItem(title: displayTitle,
+                                       time: item.time,
+                                       status: item.status,
+                                       owner: item.ownerName)
                         }
                         .buttonStyle(.plain)
                     }
@@ -420,6 +425,8 @@ struct GiverCalendarView: View {
                         sectionCard(title: "Agenda Details") {
                             VStack(spacing: 12) {
                                 TextField("Title", text: $vm.editAgendaTitle)
+                                    .disabled(!vm.isTitleEditable)
+                                       .opacity(vm.isTitleEditable ? 1.0 : 0.5)
                                     .padding(.horizontal, 10)
                                 Divider()
                                 TextField("Description (Optional)", text: $vm.editAgendaDescription)
@@ -502,8 +509,16 @@ struct GiverCalendarView: View {
                     }
                 }
 
-                Text(agenda.title)
-                    .font(.title2.bold())
+                // MARK: - Proper title for medicine
+                if agenda.medicineId != nil {
+                    // Always display medicine name, ignore stored title
+                    Text("💊 \(agenda.medicineName ?? "Unknown Medicine")")
+                        .font(.title2.bold())
+                } else {
+                    // Normal activity title
+                    Text(agenda.title)
+                        .font(.title2.bold())
+                }
 
                 Text("By \(agenda.ownerName)")
                     .font(.subheadline)
