@@ -4,7 +4,6 @@
 //
 //  Created by student on 19/11/25.
 //
-
 import SwiftUI
 
 struct VolunteerConfirmationView: View {
@@ -24,11 +23,12 @@ struct VolunteerConfirmationView: View {
         .navigationTitle("Volunteer Status")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showCompletionSheet) {
+            // ⬇️ REVISI: sekarang onSubmit kirim tip + rating
             VolunteerCompletionTipView(
                 volunteer: viewModel.volunteer,
                 isPresented: $showCompletionSheet,
-                onSubmit: { tip in
-                    viewModel.completeTask(withTip: tip)
+                onSubmit: { tip, rating in
+                    viewModel.completeTask(withTip: tip, rating: rating)
                 }
             )
         }
@@ -198,12 +198,27 @@ struct VolunteerConfirmationView: View {
                                         .foregroundColor(Color(hex: "#387b38"))
                                     
                                     if let tip = viewModel.givenTipAmount, !tip.isEmpty {
-                                        Text("Tip sent: Rp \(tip)")
+                                        Text("Tip sent: \(tip.asRupiahFormatted())")
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
                                     } else {
                                         Text("No tip was given.")
                                             .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    }
+                                    
+                                    // ⭐ NEW: tampilkan rating bintang kalau ada
+                                    if let rating = viewModel.rating {
+                                        HStack(spacing: 4) {
+                                            ForEach(1...5, id: \.self) { index in
+                                                Image(systemName: index <= rating ? "star.fill" : "star")
+                                                    .foregroundColor(Color(hex: "#fdcb46"))
+                                                    .font(.caption)
+                                            }
+                                        }
+                                        
+                                        Text("Your Review")
+                                            .font(.caption2)
                                             .foregroundColor(.gray)
                                     }
                                 }
@@ -292,6 +307,28 @@ struct ChatBubble: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
+    }
+}
+
+
+extension String {
+    /// Mengubah string angka menjadi format rupiah: "50000" ->  "50.000,00"
+    func asRupiahFormatted() -> String {
+        let clean = self.replacingOccurrences(of: ".", with: "")
+                         .replacingOccurrences(of: ",", with: "")
+                         .trimmingCharacters(in: .whitespaces)
+        
+        guard let number = Double(clean) else { return self }
+        
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencySymbol = "Rp "
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 2
+        formatter.decimalSeparator = ","
+        formatter.groupingSeparator = "."
+        
+        return formatter.string(from: NSNumber(value: number)) ?? self
     }
 }
 
