@@ -3,8 +3,7 @@
 //  WeCare
 //
 //  Created by student on 03/12/25.
-// kurang: vidcall call dichat, pov selesai task, bisa reject request, kalau accept beberapa request bisa tampilan banyak, deadline task ditampilkan
-
+// kurang: detail di history button?
 import Foundation
 
 struct VolunteerProfile: Identifiable {

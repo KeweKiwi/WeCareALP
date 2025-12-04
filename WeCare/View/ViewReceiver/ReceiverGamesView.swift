@@ -5,9 +5,9 @@ struct ReceiverGamesView: View {
     // Relaxing game recommendations (static data stored within the View)
     let recommendedGames = [
         GameRecommendation(
-            title: "Classic Solitaire",
-            description: "A card game of strategy and patience, great for focus.",
-            icon: "suit.club.fill",
+            title: "Fun 2048",
+            description: "Slide identical numbers together to reach the 2048 tile.",
+            icon: "number.square.fill",
             color: Color(hex: "#a6d17d")
         ),
         GameRecommendation(
@@ -38,6 +38,8 @@ struct ReceiverGamesView: View {
     
     // State for presenting Crossword Game (BARU DITAMBAHKAN)
     @State private var isShowingCrossword = false
+    
+    @State private var isShowing2048 = false
     
     var body: some View {
         NavigationView {
@@ -84,6 +86,14 @@ struct ReceiverGamesView: View {
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 
+                            } else if game.title == "Fun 2048" {
+                                Button(action: {
+                                    isShowing2048 = true
+                                }) {
+                                    GameCard(game: game)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
                             } else {
                                 // Other games (simulated, just showing the card without action)
                                 GameCard(game: game)
@@ -104,6 +114,11 @@ struct ReceiverGamesView: View {
             .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemGray6).ignoresSafeArea())
         }
+        // Sheet for 2048
+        .fullScreenCover(isPresented: $isShowing2048) {
+            ReceiverGame2048View()
+        }
+        
         // Sheet for Sudoku
         .fullScreenCover(isPresented: $isShowingSudoku) {
             ReceiverSudokuGameView()

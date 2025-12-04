@@ -3,7 +3,6 @@
 //  WeCare
 //
 //  Created by student on 03/12/25.
-// yg kur
 
 import Foundation
 import SwiftUI
@@ -13,7 +12,11 @@ struct VolunteerModeRootView: View {
     
     var body: some View {
         NavigationStack {
-            VolunteerHomeView(viewModel: viewModel)
+            if viewModel.isRegistered {
+                VolunteerHomeView(viewModel: viewModel)
+            } else {
+                VolunteerRegistrationView(viewModel: viewModel)
+            }
         }
     }
 }
@@ -23,10 +26,30 @@ struct VolunteerHomeView: View {
     
     var body: some View {
         VStack(spacing: 16) {
+            
+            if let profile = viewModel.profile {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Hello, \(profile.name)")
+                        .font(.title3.bold())
+                    Text("Thank you for volunteering to help other caregivers.")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            
             statusCard
             
-            if let active = viewModel.activeTask {
-                activeTaskSection(active)
+            // 🔹 Multiple current tasks
+            if !viewModel.currentTasks.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Current Tasks")
+                        .font(.headline)
+                    
+                    ForEach(viewModel.currentTasks) { task in
+                        activeTaskSection(task)
+                    }
+                }
             }
             
             incomingRequestsSection
@@ -37,6 +60,20 @@ struct VolunteerHomeView: View {
         .background(Color(.systemGray6).ignoresSafeArea())
         .navigationTitle("Volunteer Mode")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // 🔹 History button di navigation bar
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink {
+                    VolunteerHistoryView(viewModel: viewModel)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                        Text("History")
+                    }
+                    .font(.subheadline)
+                }
+            }
+        }
     }
     
     // MARK: - Subviews
@@ -67,11 +104,11 @@ struct VolunteerHomeView: View {
     private func activeTaskSection(_ task: VolunteerRequest) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Current Task")
+                Text(task.careReceiverName)
                     .font(.headline)
                 Spacer()
                 NavigationLink {
-                    VolunteerActiveTaskView(task: task)
+                    VolunteerActiveTaskView(task: task, viewModel: viewModel)
                 } label: {
                     Text("Open")
                         .font(.subheadline)
@@ -79,7 +116,7 @@ struct VolunteerHomeView: View {
                 }
             }
             
-            Text("\(task.careReceiverName) • \(task.distanceKm, specifier: "%.1f") km away")
+            Text("\(task.distanceKm, specifier: "%.1f") km away")
                 .font(.subheadline)
                 .foregroundColor(.gray)
             
@@ -114,7 +151,8 @@ struct VolunteerHomeView: View {
                             NavigationLink {
                                 VolunteerRequestDetailView(
                                     request: request,
-                                    viewModel: viewModel
+                                    viewModel: viewModel,
+                                    showActionButtons: true   // ⬅️ di sini dipakai
                                 )
                             } label: {
                                 VolunteerRequestCardView(request: request)
@@ -128,7 +166,11 @@ struct VolunteerHomeView: View {
     }
 }
 
+
+
+
 #Preview {
     VolunteerModeRootView()
 }
+
 

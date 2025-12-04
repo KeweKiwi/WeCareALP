@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CoreLocation   // ⬅️ tambahkan ini
 
 struct VolunteerRequest: Identifiable {
     let id = UUID()
@@ -13,9 +14,22 @@ struct VolunteerRequest: Identifiable {
     let careReceiverName: String
     let taskDescription: String
     let distanceKm: Double
-    let offeredReward: Int          // dalam rupiah
-    let scheduledTime: String       // contoh: "Today, 15:30"
-    let locationNote: String        // contoh: "Rumah, blok B3"
+    let offeredReward: Int
+    let scheduledTime: String
+    let locationNote: String
+    
+    // ⬅️ NEW: coordinate of care receiver
+    let careReceiverCoordinate: CLLocationCoordinate2D
+}
+
+
+// NEW: completed task model
+struct CompletedVolunteerTask: Identifiable {
+    let id = UUID()
+    let originalRequest: VolunteerRequest
+    let completedAt: Date
+    let tipAmount: Int?    // tip from caregiver, in rupiah
+    let rating: Int?       // 1–5 stars
 }
 
 struct VolunteerChatMessage: Identifiable {
@@ -25,10 +39,8 @@ struct VolunteerChatMessage: Identifiable {
     let time: String
 }
 
-// MARK: - Rupiah Helper
-
+// Rupiah helper (sudah ada sebelumnya, ulang kalau perlu)
 extension Int {
-    /// Format integer menjadi Rupiah, misal: 25000 -> "Rp 25.000"
     func asRupiah() -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
@@ -40,4 +52,6 @@ extension Int {
         return formatter.string(from: NSNumber(value: self)) ?? "Rp \(self)"
     }
 }
+
+
 
