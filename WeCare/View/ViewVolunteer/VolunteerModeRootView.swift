@@ -12,10 +12,13 @@ struct VolunteerModeRootView: View {
     
     var body: some View {
         NavigationStack {
-            if viewModel.isRegistered {
-                VolunteerHomeView(viewModel: viewModel)
-            } else {
+            switch viewModel.registrationStatus {
+            case .notRegistered:
                 VolunteerRegistrationView(viewModel: viewModel)
+            case .pendingApproval:
+                VolunteerPendingApprovalView(viewModel: viewModel)
+            case .approved:
+                VolunteerHomeView(viewModel: viewModel)
             }
         }
     }
