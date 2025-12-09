@@ -4,8 +4,6 @@
 //
 //  Created by student on 04/12/25.
 //
-
-
 import SwiftUI
 
 struct VolunteerRegistrationView: View {
@@ -18,6 +16,10 @@ struct VolunteerRegistrationView: View {
     @State private var restrictions: String = ""
     
     @State private var showValidationError: Bool = false
+    
+    // NEW: dummy state untuk upload KTP & selfie (prototype only)
+    @State private var isKTPUploaded: Bool = false
+    @State private var isSelfieUploaded: Bool = false
     
     private let genders = ["Female", "Male", "Other"]
     
@@ -88,9 +90,13 @@ struct VolunteerRegistrationView: View {
                         Text("Specialty")
                             .font(.subheadline)
                             .foregroundColor(.gray)
-                        TextField("Example: elderly care, basic medical check, grocery shopping", text: $specialty, axis: .vertical)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .lineLimit(2, reservesSpace: true)
+                        TextField(
+                            "Example: elderly care, basic medical check, grocery shopping",
+                            text: $specialty,
+                            axis: .vertical
+                        )
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .lineLimit(2, reservesSpace: true)
                     }
                     
                     // Restrictions / Notes
@@ -98,10 +104,60 @@ struct VolunteerRegistrationView: View {
                         Text("Restrictions / Notes")
                             .font(.subheadline)
                             .foregroundColor(.gray)
-                        TextField("Example: cannot lift heavy objects, available only on weekends, etc.", text: $restrictions, axis: .vertical)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .lineLimit(3, reservesSpace: true)
+                        TextField(
+                            "Example: cannot lift heavy objects, available only on weekends, etc.",
+                            text: $restrictions,
+                            axis: .vertical
+                        )
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .lineLimit(3, reservesSpace: true)
                     }
+                }
+                
+                // NEW: Identity verification (prototype KTP & selfie)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Identity Verification (Prototype)")
+                        .font(.headline)
+                    
+                    Text("In a real app, you would upload your ID card (KTP) and a selfie photo so the WeCare team can verify your identity before activating your volunteer account. For this prototype, you can simply tap the buttons below to simulate uploading.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    
+                    // Upload KTP
+                    Button(action: {
+                        isKTPUploaded.toggle()
+                    }) {
+                        HStack {
+                            Image(systemName: isKTPUploaded ? "checkmark.circle.fill" : "doc.text.viewfinder")
+                                .foregroundColor(isKTPUploaded ? Color(hex: "#387b38") : .gray)
+                            Text(isKTPUploaded ? "ID Card (KTP) uploaded (prototype)" : "Upload ID Card (KTP)")
+                                .font(.subheadline)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
+                    
+                    // Upload selfie
+                    Button(action: {
+                        isSelfieUploaded.toggle()
+                    }) {
+                        HStack {
+                            Image(systemName: isSelfieUploaded ? "checkmark.circle.fill" : "person.crop.square")
+                                .foregroundColor(isSelfieUploaded ? Color(hex: "#387b38") : .gray)
+                            Text(isSelfieUploaded ? "Selfie photo uploaded (prototype)" : "Upload selfie photo")
+                                .font(.subheadline)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
+                    
+                    Text("You can skip these steps for now. They are optional in this prototype and do not block registration.")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
                 }
                 
                 if showValidationError {

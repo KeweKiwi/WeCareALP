@@ -4,17 +4,26 @@
 //
 //  Created by student on 03/12/25.
 //
-
 import Foundation
 import Combine
 import CoreLocation
+
+// 🔹 NEW: status registrasi volunteer
+enum VolunteerRegistrationStatus {
+    case notRegistered
+    case pendingApproval
+    case approved
+}
 
 class VolunteerModeVM: ObservableObject {
     let volunteerCoordinate = CLLocationCoordinate2D(latitude: -6.200000, longitude: 106.816666)
     
     // Registration
-    @Published var isRegistered: Bool = false
+    @Published var isRegistered: Bool = false          // ⬅️ tetap dipakai
     @Published var profile: VolunteerProfile? = nil
+    
+    // 🔹 NEW: status yang lebih detail
+    @Published var registrationStatus: VolunteerRegistrationStatus = .notRegistered
     
     // Availability
     @Published var isAvailable: Bool = true
@@ -64,7 +73,17 @@ class VolunteerModeVM: ObservableObject {
             restrictions: restrictions
         )
         self.profile = newProfile
-        self.isRegistered = true
+        
+        // 🔹 SEBELUMNYA: isRegistered = true langsung
+        // Sekarang: masuk dulu ke pending approval
+        self.isRegistered = false
+        self.registrationStatus = .pendingApproval
+    }
+    
+    /// 🔹 NEW: dipanggil dari waiting room (simulate admin approve)
+    func approveRegistration() {
+        registrationStatus = .approved
+        isRegistered = true
     }
     
     // MARK: - Request Actions
