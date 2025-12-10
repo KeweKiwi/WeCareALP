@@ -61,7 +61,7 @@ struct VolunteerHomeView: View {
         }
         .padding()
         .background(Color(.systemGray6).ignoresSafeArea())
-        .navigationTitle("Volunteer Mode")
+//        .navigationTitle("Volunteer Mode")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // 🔹 History button di navigation bar
