@@ -32,12 +32,15 @@ struct ReceiverDashboardView: View {
                         
                         Spacer()
                         
-                        Image(systemName: "gearshape.fill")
-                            .font(.title)
-                            .foregroundColor(Color(hex: "#91bef8"))
-                            .padding(12)
-                            .background(Color.white)
-                            .clipShape(Circle())
+                        NavigationLink(destination: ReceiverSettingsView(viewModel: viewModel)) {
+                                Image(systemName: "gearshape.fill")
+                                    .font(.title)
+                                    .foregroundColor(Color(hex: "#91bef8"))
+                                    .padding(12)
+                                    .background(Color.white)
+                                    .clipShape(Circle())
+                        }
+    
                     }
                     .padding(.horizontal)
                     
