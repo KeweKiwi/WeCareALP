@@ -26,45 +26,67 @@ struct VolunteerModeRootView: View {
 
 struct VolunteerHomeView: View {
     @ObservedObject var viewModel: VolunteerModeVM
-    
+
+    // Palette
+    private let yellow = Color(hex: "#fdcb46")
+    private let red = Color(hex: "#fa6255")
+    private let green = Color(hex: "#a6d17d")
+    private let skyBlue = Color(hex: "#91bef8")
+    private let softBlue = Color(hex: "#e1c7ec")
+
     var body: some View {
         VStack(spacing: 16) {
-            
+
+            // MARK: Greeting Section
             if let profile = viewModel.profile {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Hello, \(profile.name)")
-                        .font(.title3.bold())
-                    Text("Thank you for volunteering to help other caregivers.")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
+
+                    HStack(spacing: 8) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(yellow)
+                            .frame(width: 6, height: 28)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Hello, \(profile.name)")
+                                .font(.title3.bold())
+                                .foregroundColor(.black)
+
+                            Text("Thank you for volunteering to help other caregivers.")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            
+
+
+            // STATUS CARD
             statusCard
-            
-            // 🔹 Multiple current tasks
+
+            // CURRENT TASKS
             if !viewModel.currentTasks.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Current Tasks")
                         .font(.headline)
-                    
-                    ForEach(viewModel.currentTasks) { task in
-                        activeTaskSection(task)
+                        .padding(.leading, 4)
+
+                    VStack(spacing: 12) {
+                        ForEach(viewModel.currentTasks) { task in
+                            activeTaskSection(task)
+                        }
                     }
                 }
             }
-            
+
             incomingRequestsSection
-            
+
             Spacer()
         }
         .padding()
         .background(Color(.systemGray6).ignoresSafeArea())
-//        .navigationTitle("Volunteer Mode")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // 🔹 History button di navigation bar
             ToolbarItem(placement: .navigationBarTrailing) {
                 NavigationLink {
                     VolunteerHistoryView(viewModel: viewModel)
@@ -74,79 +96,116 @@ struct VolunteerHomeView: View {
                         Text("History")
                     }
                     .font(.subheadline)
+                    .foregroundColor(skyBlue)
                 }
             }
         }
     }
-    
-    // MARK: - Subviews
-    
+
+
+    // MARK: STATUS CARD
     private var statusCard: some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Volunteer Status")
                     .font(.headline)
-                Text(viewModel.isAvailable ? "Available to receive requests" : "Not available")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
+
+                HStack(spacing: 6) {
+                    Image(systemName: viewModel.isAvailable ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(viewModel.isAvailable ? green : red)
+
+                    Text(viewModel.isAvailable ? "Available to receive requests" : "Not available")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                }
+
+
+
             }
-            
+
             Spacer()
-            
+
             Toggle(isOn: $viewModel.isAvailable) {
-                Text("")
+                EmptyView()
             }
             .labelsHidden()
         }
         .padding()
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(softBlue.opacity(0.2))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(skyBlue.opacity(0.4), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
-    
+
+
+    // MARK: ACTIVE TASK CARD
     private func activeTaskSection(_ task: VolunteerRequest) -> some View {
         VStack(alignment: .leading, spacing: 8) {
+
             HStack {
                 Text(task.careReceiverName)
                     .font(.headline)
+
                 Spacer()
+
                 NavigationLink {
                     VolunteerActiveTaskView(task: task, viewModel: viewModel)
                 } label: {
                     Text("Open")
                         .font(.subheadline)
-                        .foregroundColor(Color(hex: "#387b38"))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(green.opacity(0.2))
+                        .foregroundColor(green)
+                        .cornerRadius(8)
                 }
             }
-            
+
             Text("\(task.distanceKm, specifier: "%.1f") km away")
                 .font(.subheadline)
                 .foregroundColor(.gray)
-            
+
             Text(task.taskDescription)
                 .font(.subheadline)
                 .lineLimit(2)
+
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
-        .cornerRadius(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(softBlue.opacity(0.4), lineWidth: 1)
+        )
         .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 2)
     }
-    
+
+
+    // MARK: INCOMING REQUESTS
     private var incomingRequestsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
+
             HStack {
                 Text("Incoming Requests")
                     .font(.headline)
+
                 Spacer()
+
                 if viewModel.incomingRequests.isEmpty {
                     Text("No new requests")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                 }
             }
-            
+
             if !viewModel.incomingRequests.isEmpty {
                 ScrollView {
                     VStack(spacing: 12) {
@@ -155,12 +214,22 @@ struct VolunteerHomeView: View {
                                 VolunteerRequestDetailView(
                                     request: request,
                                     viewModel: viewModel,
-                                    showActionButtons: true   // ⬅️ di sini dipakai
+                                    showActionButtons: true
                                 )
                             } label: {
                                 VolunteerRequestCardView(request: request)
+                                    .padding()
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(Color.white)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(skyBlue.opacity(0.4), lineWidth: 1)
+                                    )
+                                    .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 2)
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -168,6 +237,8 @@ struct VolunteerHomeView: View {
         }
     }
 }
+
+
 
 
 

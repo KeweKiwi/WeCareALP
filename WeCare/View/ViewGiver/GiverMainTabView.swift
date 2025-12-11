@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// Tab utama untuk caregiver:
-/// - Persons (list care receiver)
-/// - Calendar (jadwal / kalender)
-/// - Volunteer (menu volunteer)
+
 struct GiverMainTabView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator
     @EnvironmentObject var authVM: AuthViewModel
@@ -12,30 +9,59 @@ struct GiverMainTabView: View {
         TabView {
             
             // TAB 1: Persons
-            GiverPersonListView()
-                .tabItem {
-                    Label("Persons", systemImage: "person.3.fill")
-                }
+            NavigationStack {
+                GiverPersonListView()
+            }
+            .tabItem {
+                Label("Persons", systemImage: "person.3.fill")
+            }
             
             // TAB 2: Calendar
-            GiverCalendarView()
-                .tabItem {
-                    Label("Calendar", systemImage: "calendar")
-                }
+            NavigationStack {
+                GiverCalendarView()
+            }
+            .tabItem {
+                Label("Calendar", systemImage: "calendar")
+            }
             
-            // ⭐ TAB 3: Volunteer
-            VolunteerModeRootView()
-                .tabItem {
-                    Label("Volunteer", systemImage: "hands.sparkles.fill")
+            // TAB 3: Volunteer
+            NavigationStack {
+                VolunteerModeRootView()
+            }
+            .tabItem {
+                Label("Volunteer", systemImage: "hands.sparkles.fill")
+            }
+            
+            // TAB 4: Settings
+            NavigationStack {
+                if let user = authVM.currentUser {
+                    GiverSettingsView(userId: user.id)
+                } else {
+                    Text("Settings")
                 }
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gear")
+            }
         }
     }
 }
 
+
+
+
+
+
+
 #Preview {
-    GiverMainTabView()
+    // Untuk preview, kamu bisa bikin AuthViewModel dummy
+    let authVM = AuthViewModel()
+    // authVM.currentUser = Users(id: "dummy-id", data: [:])  // sesuaikan dengan init kamu
+    
+    return GiverMainTabView()
         .environmentObject(NavigationCoordinator())
-        .environmentObject(AuthViewModel())
+        .environmentObject(authVM)
 }
+
 
 

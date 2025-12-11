@@ -6,7 +6,7 @@ struct RegisterView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Brand.ivory.ignoresSafeArea()
+                
                 VStack(spacing: 24) {
                     VStack(spacing: 8) {
                         Text("I am a")

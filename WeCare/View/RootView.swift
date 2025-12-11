@@ -16,13 +16,13 @@ struct RootView: View {
             Group {
                 if authVM.isLoggedIn {
                     // ✅ Logged in → go to your real app
-                    GiverPersonListView()          // or UsersTableView() if that’s your main
+                    GiverMainTabView()          // or UsersTableView() if that’s your main
                         .environmentObject(coordinator)
                         .environmentObject(authVM)
                 } else {
                     // 🔐 Not logged in → show login
                     NavigationStack {
-                        LoginView()
+                        StartView()
                     }
                     .environmentObject(authVM)
                 }
