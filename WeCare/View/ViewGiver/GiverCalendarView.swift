@@ -4,19 +4,14 @@
 //
 //  Created by student on 13/11/25.
 //
-
 import SwiftUI
-
-
 struct GiverCalendarView: View {
     @StateObject var usersVM = UsersTableViewModel()
     @StateObject var vm = GiverCalendarVM()
     @StateObject var medicinesVM = MedicinesViewModel()
-
     var body: some View {
         ZStack {
             Color(hex: "#FDFBF8").ignoresSafeArea()
-
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 28) {
                     header
@@ -54,9 +49,7 @@ struct GiverCalendarView: View {
         .onAppear {
             medicinesVM.fetchAllMedicines()
         }
-
     }
-
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Calendar")
@@ -70,22 +63,19 @@ struct GiverCalendarView: View {
         .padding(.horizontal)
         .padding(.top, 20)
     }
-
     private var filterScroll: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
                 filterButton(user: nil, label: "All")
-                ForEach(vm.users) { user in
+                ForEach(vm.receiverUsers) { user in
                     filterButton(user: user, label: user.fullName)
                 }
             }
             .padding(.horizontal)
         }
     }
-
     private func filterButton(user: Users?, label: String) -> some View {
         let isSelected = vm.selectedUser?.id == user?.id
-
         return Button {
             vm.selectedPerson = user
         } label: {
@@ -100,8 +90,6 @@ struct GiverCalendarView: View {
                 .foregroundColor(.black)
         }
     }
-
-
     private var calendarCard: some View {
         VStack(spacing: 16) {
             HStack {
@@ -112,12 +100,10 @@ struct GiverCalendarView: View {
                 Button { withAnimation { vm.currentMonthOffset += 1 } } label: { Image(systemName: "chevron.right").foregroundColor(.black) }
             }
             .padding(.horizontal)
-
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 12) {
                 ForEach(1...vm.daysInMonth, id: \.self) { day in
                     let thisDate = vm.dateForDay(day)
                     let isSelected = Calendar.current.isDate(thisDate, inSameDayAs: vm.selectedDate)
-
                     VStack(spacing: 4) {
                         if Calendar.current.isDateInToday(thisDate) {
                             Text("Today")
@@ -127,25 +113,21 @@ struct GiverCalendarView: View {
                             Text(" ")
                                 .font(.caption2)
                         }
-
                         ZStack {
                             Circle()
                                 .fill(vm.colorForDay(day))
                                 .frame(width: 36, height: 36)
-
                             if isSelected {
                                 Circle()
                                     .stroke(Color(hex: "#fdcb46"), lineWidth: 3)
                                     .frame(width: 44, height: 44)
                                     .shadow(color: Color(hex: "#fdcb46").opacity(0.3), radius: 4, y: 2)
                             }
-
                             if Calendar.current.isDateInToday(thisDate) {
                                 Circle()
                                     .stroke(Color(hex: "#b87cf5"), lineWidth: 2.5)
                                     .frame(width: 40, height: 40)
                             }
-
                             Text("\(day)")
                                 .font(.callout.bold())
                                 .foregroundColor(.black)
@@ -158,7 +140,6 @@ struct GiverCalendarView: View {
                 }
             }
             .padding(.horizontal)
-
             HStack(spacing: 16) {
                 legendColor(color: "#a6d17d", text: "Low")
                 legendColor(color: "#91bef8", text: "Medium")
@@ -173,7 +154,6 @@ struct GiverCalendarView: View {
         .shadow(color: Color.black.opacity(0.08), radius: 8, y: 3)
         .padding(.horizontal)
     }
-
     private var agendaCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -189,7 +169,6 @@ struct GiverCalendarView: View {
                         .font(.title2)
                 }
             }
-
             if vm.currentAgenda.isEmpty {
                 Text("No agenda for this date.")
                     .font(.subheadline)
@@ -206,7 +185,6 @@ struct GiverCalendarView: View {
                                 item.medicineId != nil
                                 ? "💊 \(item.medicineName ?? "Unknown Medicine")"
                                 : item.title
-
                             agendaItem(title: displayTitle,
                                        time: item.time,
                                        status: item.status,
@@ -223,14 +201,12 @@ struct GiverCalendarView: View {
         .shadow(color: Color.black.opacity(0.08), radius: 8, y: 3)
         .padding(.horizontal)
     }
-
     private func legendColor(color: String, text: String) -> some View {
         HStack(spacing: 6) {
             Circle().fill(Color(hex: color)).frame(width: 10, height: 10)
             Text(text).font(.caption).foregroundColor(.gray)
         }
     }
-
     private func agendaItem(title: String, time: String, status: UrgencyStatus, owner: String) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -246,7 +222,6 @@ struct GiverCalendarView: View {
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 3, y: 2)
     }
-
     private func color(for status: UrgencyStatus) -> Color {
         switch status {
         case .low: return Color(hex: "#a6d17d")
@@ -258,12 +233,10 @@ struct GiverCalendarView: View {
     }
     
     // MARK: - Redesigned Add Agenda Sheet (Aesthetic and Spacing Improvements)
-
     private var vmAddAgendaSheet: some View {
         // Use a ZStack with a soft background color
         ZStack {
             Color(hex: "#FDFBF8").ignoresSafeArea()
-
             VStack(spacing: 0) {
                 // Custom Navigation Bar / Header
                 HStack {
@@ -287,7 +260,6 @@ struct GiverCalendarView: View {
                 .padding()
                 .background(Color.white)
                 .shadow(color: Color.black.opacity(0.05), radius: 2, y: 2)
-
                 ScrollView(showsIndicators: false) {
                     // Use generous vertical spacing between sections
                     VStack(alignment: .leading, spacing: 30) {
@@ -312,7 +284,6 @@ struct GiverCalendarView: View {
                                     if vm.newAgendaType == .medicine {
                                         Picker("Select Medicine", selection: $vm.selectedMedicine) {
                                             Text("Choose Medicine").tag(nil as Medicines?)
-
                                             ForEach(medicinesVM.medicines, id: \.self) { med in
                                                 Text(med.medicineName).tag(Optional(med))
                                             }
@@ -329,7 +300,6 @@ struct GiverCalendarView: View {
                                     .padding(.horizontal, 10)
                                 
                                 Divider()
-
                                 // Use a standard DatePicker style for cleaner look (not wheel in this field)
                                 HStack {
                                     Text("Select Time")
@@ -345,7 +315,7 @@ struct GiverCalendarView: View {
                         sectionCard(title: "For Who") {
                             Picker("Select Person", selection: $vm.newAgendaOwner) {
                                 Text("Choose Person").tag(nil as Users?)
-                                ForEach(vm.users) { user in
+                                ForEach(vm.receiverUsers) { user in
                                     Text(user.fullName).tag(Optional(user))
                                 }
                             }
@@ -373,7 +343,6 @@ struct GiverCalendarView: View {
         }
         .presentationDetents([.large]) // Ensure it takes up full screen height
     }
-
     private func sectionCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
@@ -390,24 +359,17 @@ struct GiverCalendarView: View {
             .shadow(color: Color.black.opacity(0.08), radius: 6, y: 3)
         }
     }
-
     private var vmEditAgendaSheet: some View {
         ZStack {
             Color(hex: "#FDFBF8").ignoresSafeArea()
-
             VStack(spacing: 0) {
-
                 HStack {
                     Button("Cancel") { vm.showingEditAgenda = false }
                         .foregroundColor(Color(hex: "#fa6255"))
-
                     Spacer()
-
                     Text("Edit Agenda")
                         .font(.headline.bold())
-
                     Spacer()
-
                     Button("Save") {
                         vm.saveEditedAgenda()
                         vm.showingEditAgenda = false
@@ -418,10 +380,8 @@ struct GiverCalendarView: View {
                 .padding()
                 .background(Color.white)
                 .shadow(color: Color.black.opacity(0.05), radius: 2, y: 2)
-
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 30) {
-
                         sectionCard(title: "Agenda Details") {
                             VStack(spacing: 12) {
                                 TextField("Title", text: $vm.editAgendaTitle)
@@ -444,7 +404,7 @@ struct GiverCalendarView: View {
                         sectionCard(title: "For Who") {
                             Picker("Select Person", selection: $vm.editAgendaOwner) {
                                 Text("Choose Person").tag(nil as Users?)
-                                ForEach(vm.users) { user in
+                                ForEach(vm.receiverUsers) { user in
                                     Text(user.fullName).tag(Optional(user))
                                 }
                             }
@@ -471,21 +431,17 @@ struct GiverCalendarView: View {
         }
         .presentationDetents([.large])
     }
-
     private func agendaDetailView(_ agenda: AgendaItem) -> some View {
         ScrollView {   // ← FIX: ensures image fully appears
             VStack(alignment: .leading, spacing: 16) {
-
                 // MARK: - Medicine Image (only if exists)
                 if let imageURL = agenda.medicineImage,
                    let url = URL(string: imageURL) {
-
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .empty:
                             ProgressView()
                                 .frame(maxWidth: .infinity, maxHeight: 200)
-
                         case .success(let img):
                             img
                                 .resizable()
@@ -494,7 +450,6 @@ struct GiverCalendarView: View {
                                 .cornerRadius(16)
                                 .shadow(radius: 6)
                                 .padding(.bottom, 8)
-
                         case .failure:
                             Image(systemName: "photo")
                                 .resizable()
@@ -502,13 +457,11 @@ struct GiverCalendarView: View {
                                 .frame(maxWidth: .infinity, maxHeight: 150)
                                 .foregroundColor(.gray.opacity(0.5))
                                 .padding(.bottom, 8)
-
                         @unknown default:
                             EmptyView()
                         }
                     }
                 }
-
                 // MARK: - Proper title for medicine
                 if agenda.medicineId != nil {
                     // Always display medicine name, ignore stored title
@@ -519,11 +472,9 @@ struct GiverCalendarView: View {
                     Text(agenda.title)
                         .font(.title2.bold())
                 }
-
                 Text("By \(agenda.ownerName)")
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "#b87cf5"))
-
                 HStack {
                     Text("⏰ \(agenda.time)")
                     Spacer()
@@ -531,15 +482,11 @@ struct GiverCalendarView: View {
                         .font(.subheadline.bold())
                         .foregroundColor(color(for: agenda.status))
                 }
-
                 Divider()
-
                 Text(agenda.description.isEmpty ? "No description provided." : agenda.description)
                     .font(.body)
                     .padding(.top, 8)
-
                 Spacer()
-
                 Button {
                     vm.selectedAgenda = nil
                     vm.startEditing(agenda)
@@ -556,7 +503,6 @@ struct GiverCalendarView: View {
                     .background(Color(hex: "#b87cf5").opacity(0.15))
                     .cornerRadius(12)
                 }
-
                 Button(role: .destructive) {
                     vm.deleteAgenda(agenda)
                     vm.selectedAgenda = nil
@@ -575,14 +521,13 @@ struct GiverCalendarView: View {
         }
         .presentationDetents([.medium, .large])
     }
-
     private func formattedSelectedDate(_ date: Date) -> String {
         let f = DateFormatter()
         f.dateFormat = "d MMMM yyyy"
         return f.string(from: date)
     }
 }
-
 #Preview {
     GiverCalendarView()
 }
+

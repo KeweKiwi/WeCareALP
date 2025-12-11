@@ -189,7 +189,7 @@ struct VolunteerRegistrationView: View {
             .padding()
         }
         .background(Color(.systemGray6).ignoresSafeArea())
-        .navigationTitle("Volunteer Registration")
+//        .navigationTitle("Volunteer Registration")
         .navigationBarTitleDisplayMode(.inline)
     }
     

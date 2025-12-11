@@ -48,7 +48,7 @@ struct VolunteerFinderView: View {
                 }
                 Spacer()
             }
-            .navigationTitle("Volunteer Finder")
+//            .navigationTitle("Volunteer Finder")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 viewModel.startSearching()
