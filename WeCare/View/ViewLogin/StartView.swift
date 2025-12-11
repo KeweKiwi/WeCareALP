@@ -51,7 +51,10 @@ struct StartView: View {
             // biarkan navigation bar aktif supaya toolbar di LoginView bekerja
         }
     }
-#Preview { StartView() }
+#Preview {
+    StartView()
+        .environmentObject(AuthViewModel())
+}
 
 
 
