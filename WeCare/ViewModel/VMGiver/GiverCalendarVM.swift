@@ -28,6 +28,7 @@ final class GiverCalendarVM: ObservableObject {
     @Published var newAgendaTimeDate: Date = Date()
     @Published var newAgendaType: AgendaType = .activity
     @Published var selectedMedicine: Medicines? = nil
+    @Published var medicines: [Medicines] = []
 
     // ===== ALERT =====
     @Published var showPastDateAlert = false
@@ -50,7 +51,8 @@ final class GiverCalendarVM: ObservableObject {
     @Published var persons: [Users] = []
     // agendaData organized by receiver's fullName
     @Published var agendaData: [String: [String: [AgendaItem]]] = [:]
-
+    
+    
     private let db = Firestore.firestore()
     private let tasksCollection = "Tasks" // root collection as per your screenshot
 
@@ -153,34 +155,35 @@ final class GiverCalendarVM: ObservableObject {
         return persons.flatMap { agendaData[$0.fullName]?[key] ?? [] }
     }
 
-    // MARK: - Remove / Delete (local only; also delete from Firestore)
-
     func deleteAgenda(_ agenda: AgendaItem) {
         let key = dateKey(from: selectedDate)
+        
         if let person = selectedPerson {
             _ = removeAgenda(ownerName: person.fullName, dateKey: key, agenda: agenda)
         } else {
             for p in persons {
-                if removeAgenda(ownerName: p.fullName, dateKey: key, agenda: agenda) { break }
-            }
-        }
-
-        // attempt to delete in Firestore if this agenda corresponds to a persisted task (task_id)
-        // our AgendaItem.id when loaded from Firestore uses the documentID; when locally created it's UUID.
-        if let docId = Int(agenda.id) == nil ? agenda.id : nil {
-            // if the id is the Firestore docID (string), remove doc
-            Task {
-                do {
-                    try await db.collection(tasksCollection).document(agenda.id).delete()
-                    print("Firestore: deleted docId=\(agenda.id)")
-                    // refresh
-                    await fetchTasksForSelectedReceiver()
-                } catch {
-                    print("❌ Firestore delete failed: \(error.localizedDescription)")
+                if removeAgenda(ownerName: p.fullName, dateKey: key, agenda: agenda) {
+                    break
                 }
             }
         }
+        
+        // Always use agenda.id as Firestore docID
+        Task {
+            do {
+                try await db.collection(tasksCollection)
+                    .document(agenda.id)
+                    .delete()
+                
+                print("🔥 Firestore permanently deleted docId = \(agenda.id)")
+                await fetchTasksForSelectedReceiver()
+                
+            } catch {
+                print("❌ Firestore delete failed: \(error.localizedDescription)")
+            }
+        }
     }
+
 
     @discardableResult
     private func removeAgenda(ownerName: String, dateKey: String, agenda: AgendaItem) -> Bool {
@@ -197,10 +200,34 @@ final class GiverCalendarVM: ObservableObject {
         return false
     }
 
+    func loadMedicines() async {
+        do {
+            let snapshot = try await db.collection("Medicines").getDocuments()
+            
+            let meds = snapshot.documents.map { doc in
+                Medicines(id: doc.documentID, data: doc.data())
+            }
+            
+            DispatchQueue.main.async {
+                self.medicines = meds
+                print("📥 Loaded \(meds.count) medicines")
+            }
+        } catch {
+            print("❌ Error loading medicines: \(error)")
+        }
+    }
+    
+    init() {
+        Task {
+            await loadMedicines()
+        }
+    }
+
     // MARK: - FIRESTORE: Fetch tasks for selected receiver
 
     /// Loads tasks from Firestore for selectedReceiver (and currentCaregiver if present).
     func fetchTasksForSelectedReceiver() async {
+        
         guard let receiver = selectedPerson else {
             print("⚠️ fetchTasks aborted: no selectedPerson")
             return
@@ -226,17 +253,29 @@ final class GiverCalendarVM: ObservableObject {
                 let caregiverUserId = data["careGiver_id"] as? Int ?? 0
                 // map caregiver id -> Users model (search in full user list)
                 let caregiver = self.users.first { $0.userId == caregiverUserId }
-
+                
                 let title = data["title"] as? String ?? ""
                 let description = data["description"] as? String ?? ""
                 let typeString = (data["type"] as? String) ?? UrgencyStatus.low.rawValue
                 let medicineId = data["medicine_id"] as? Int
                 // due_time (Timestamp) -> Date
                 let dueTimestamp = (data["due_time"] as? Timestamp)?.dateValue() ?? Date()
-
+                
                 let dateKey = dateKey(from: dueTimestamp)
                 let timeString = timeFormatter.string(from: dueTimestamp)
-
+                
+                var medName: String? = nil
+                var medImage: String? = nil
+                
+                if let medId = medicineId {
+                    if let med = medicines.first(where: { $0.medicineId == medId }) {
+                        medName = med.medicineName
+                        medImage = med.medicineImage
+                    } else {
+                        print("⚠️ MedicineID \(medId) not found in medicines list")
+                    }
+                }
+                
                 let agenda = AgendaItem(
                     id: doc.documentID, // use Firestore docID for persisted items
                     title: title,
@@ -247,9 +286,9 @@ final class GiverCalendarVM: ObservableObject {
                     type: (medicineId == nil ? .activity : .medicine),
                     ownerId: caregiver?.id ?? "",
                     ownerName: caregiver?.fullName ?? "Unknown",
-                    medicineId: medicineId,
-                    medicineName: nil,
-                    medicineImage: nil
+                    medicineId: medicineId,            // ← FIXED
+                    medicineName: medName,
+                    medicineImage: medImage
                 )
 
                 print("  → parsed task docId=\(doc.documentID) title='\(title)' date=\(dateKey) time=\(timeString) caregiverUserId=\(caregiverUserId)")
@@ -315,7 +354,6 @@ final class GiverCalendarVM: ObservableObject {
 
         let dateKey = dateKey(from: selectedDate)
 
-        // Build local AgendaItem (id will be a UUID for local cache; after Firestore write we refresh and replace with doc id)
         let localItem = AgendaItem(
             id: UUID().uuidString,
             title: finalTitle,
@@ -326,10 +364,11 @@ final class GiverCalendarVM: ObservableObject {
             type: newAgendaType,
             ownerId: receiver.id,
             ownerName: receiver.fullName,
-            medicineId: newAgendaType == .medicine ? selectedMedicine?.medicineId : nil,
-            medicineName: newAgendaType == .medicine ? selectedMedicine?.medicineName : nil,
-            medicineImage: newAgendaType == .medicine ? selectedMedicine?.medicineImage : nil
+            medicineId: selectedMedicine?.medicineId,
+            medicineName: selectedMedicine?.medicineName,      // ← FIXED
+            medicineImage: selectedMedicine?.medicineImage     // ← FIXED
         )
+
 
         // Store locally under receiver
         var receiverMap = agendaData[receiver.fullName] ?? [:]
