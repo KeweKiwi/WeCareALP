@@ -6,19 +6,17 @@ import Foundation
 import Combine
 import SwiftUI
 import FirebaseFirestore
-
 @MainActor
 final class GiverCalendarVM: ObservableObject {
     // ===== USERS =====
     @Published var users: [Users] = []
     @Published var selectedUser: Users? = nil           // UI selection (filter UI)
     @Published var currentCaregiver: Users? = nil       // forced caregiver (Budi)
-
+    @Published var selectedFilterPerson: Users? = nil //filter awal
     // ===== UI STATE =====
     @Published var selectedDate: Date = Date()
     @Published var currentMonthOffset: Int = 0
     @Published var selectedPerson: Users? = nil         // selected careReceiver
-
     // ===== ADD-AGENDA SHEET =====
     @Published var showingAddAgenda = false
     @Published var newAgendaTitle = ""
@@ -29,11 +27,9 @@ final class GiverCalendarVM: ObservableObject {
     @Published var newAgendaType: AgendaType = .activity
     @Published var selectedMedicine: Medicines? = nil
     @Published var medicines: [Medicines] = []
-
     // ===== ALERT =====
     @Published var showPastDateAlert = false
     private var confirmSavePastAgenda = false
-
     // ===== DETAIL / EDIT =====
     @Published var selectedAgenda: AgendaItem? = nil
     @Published var showingEditAgenda = false
@@ -45,7 +41,6 @@ final class GiverCalendarVM: ObservableObject {
     @Published var editAgendaOwner: Users? = nil
     @Published var editAgendaType: AgendaType = .activity
     @Published var isTitleEditable: Bool = true
-
     // ===== DATA =====
     // persons holds only careReceivers (so the view/pickers won't show the caregiver)
     @Published var persons: [Users] = []
@@ -55,18 +50,14 @@ final class GiverCalendarVM: ObservableObject {
     
     private let db = Firestore.firestore()
     private let tasksCollection = "Tasks" // root collection as per your screenshot
-
     // MARK: - Initialization / caregiver forcing
-
     /// Call updateUsers when UsersTableViewModel publishes users.
     /// This will set the forced caregiver (Budi) and keep `persons` to receivers only.
     func updateUsers(_ newUsers: [Users]) {
         print("VM.updateUsers called — count: \(newUsers.count)")
         self.users = newUsers
-
         // Force caregiver to Budi if possible, otherwise use first caregiver fallback
         forceCaregiverToBudiOrFirst(newUsers: newUsers)
-
     
         // persons should contain only careReceivers so UI lists (filter/picker) don't show caregiver
         self.persons = newUsers.filter { user in
@@ -74,14 +65,12 @@ final class GiverCalendarVM: ObservableObject {
             let r = user.role.lowercased()
             return r.contains("receiver") || r.contains("carereceiver") // be robust
         }
-
         // If selectedPerson disappeared in the new set, clear it
         if let sel = selectedPerson, !newUsers.contains(where: { $0.id == sel.id }) {
             print("Previously selected person not present anymore -> clearing selectedPerson")
             selectedPerson = nil
             selectedUser = nil
         }
-
         // If a receiver is selected, fetch their tasks
         if selectedPerson != nil {
             print("Selected person present after update -> fetching tasks")
@@ -98,7 +87,6 @@ final class GiverCalendarVM: ObservableObject {
             }
         }
     }
-
     /// Force caregiver to Budi (by full name "Budi" or role contains "caregiv").
     private func forceCaregiverToBudiOrFirst(newUsers: [Users]) {
         // Prefer exact Budi Santoso match if present
@@ -107,46 +95,37 @@ final class GiverCalendarVM: ObservableObject {
             print("🔥 Forced caregiver to Budi: \(budi.fullName)")
             return
         }
-
         // Otherwise pick first caregiver by role
         if let firstGiver = newUsers.first(where: { $0.role.lowercased().contains("caregiv") }) {
             currentCaregiver = firstGiver
             print("⚠️ Budi not found. Forced caregiver to first caregiver: \(firstGiver.fullName)")
             return
         }
-
         // fallback: nil
         currentCaregiver = nil
         print("⚠️ No caregiver found in users list.")
     }
-
     // For the view: expose receiver users (to populate filter/picker)
     var receiverUsers: [Users] {
         persons
     }
-
     // MARK: - Calendar helpers
-
     var currentMonthName: String {
         let f = DateFormatter()
         f.dateFormat = "MMMM yyyy"
         return f.string(from: dateByAddingMonths(currentMonthOffset))
     }
-
     private func dateByAddingMonths(_ months: Int) -> Date {
         Calendar.current.date(byAdding: .month, value: months, to: Date()) ?? Date()
     }
-
     var daysInMonth: Int {
         Calendar.current.range(of: .day, in: .month, for: dateByAddingMonths(currentMonthOffset))?.count ?? 30
     }
-
     func dateForDay(_ day: Int) -> Date {
         var comps = Calendar.current.dateComponents([.year, .month], from: dateByAddingMonths(currentMonthOffset))
         comps.day = day
         return Calendar.current.date(from: comps) ?? Date()
     }
-
     var currentAgenda: [AgendaItem] {
         let key = dateKey(from: selectedDate)
         if let person = selectedPerson {
@@ -154,7 +133,6 @@ final class GiverCalendarVM: ObservableObject {
         }
         return persons.flatMap { agendaData[$0.fullName]?[key] ?? [] }
     }
-
     func deleteAgenda(_ agenda: AgendaItem) {
         let key = dateKey(from: selectedDate)
         
@@ -183,8 +161,6 @@ final class GiverCalendarVM: ObservableObject {
             }
         }
     }
-
-
     @discardableResult
     private func removeAgenda(ownerName: String, dateKey: String, agenda: AgendaItem) -> Bool {
         var ownerMap = agendaData[ownerName] ?? [:]
@@ -199,7 +175,6 @@ final class GiverCalendarVM: ObservableObject {
         }
         return false
     }
-
     func loadMedicines() async {
         do {
             let snapshot = try await db.collection("Medicines").getDocuments()
@@ -219,35 +194,28 @@ final class GiverCalendarVM: ObservableObject {
     
     init() {
         Task {
-            await loadMedicines()
+            await loadMedicines() //LOAD MEDICINE DULU SUPAYA MEDICINE ID NYA GA NIL BARU FETCH TASKS
+            await fetchTasksForSelectedReceiver()
         }
     }
-
     // MARK: - FIRESTORE: Fetch tasks for selected receiver
-
-    /// Loads tasks from Firestore for selectedReceiver (and currentCaregiver if present).
     func fetchTasksForSelectedReceiver() async {
         
         guard let receiver = selectedPerson else {
             print("⚠️ fetchTasks aborted: no selectedPerson")
             return
         }
-
         print("fetchTasks: loading tasks for receiver='\(receiver.fullName)' (userId=\(receiver.userId))")
         do {
             var query: Query = db.collection(tasksCollection).whereField("careReceiver_id", isEqualTo: receiver.userId)
-
             // If we have a forced caregiver, narrow by caregiver as well (keeps the calendar focused)
             if let giver = currentCaregiver {
                 query = query.whereField("careGiver_id", isEqualTo: giver.userId)
                 print("fetchTasks: additionally filtering by careGiver_id=\(giver.userId)")
             }
-
             let snapshot = try await query.getDocuments()
             print("📥 fetchTasks -> found \(snapshot.documents.count) docs for receiver \(receiver.fullName)")
-
             var newAgendaForReceiver: [String: [AgendaItem]] = [:]
-
             for doc in snapshot.documents {
                 let data = doc.data()
                 let caregiverUserId = data["careGiver_id"] as? Int ?? 0
@@ -290,43 +258,41 @@ final class GiverCalendarVM: ObservableObject {
                     medicineName: medName,
                     medicineImage: medImage
                 )
-
                 print("  → parsed task docId=\(doc.documentID) title='\(title)' date=\(dateKey) time=\(timeString) caregiverUserId=\(caregiverUserId)")
-
                 var arr = newAgendaForReceiver[dateKey] ?? []
                 arr.append(agenda)
                 newAgendaForReceiver[dateKey] = arr
             }
-
             // Update local cache
             DispatchQueue.main.async {
                 self.agendaData[receiver.fullName] = newAgendaForReceiver
                 print("✅ fetchTasks: agendaData[\(receiver.fullName)] updated (keys: \(newAgendaForReceiver.keys.count))")
             }
-
         } catch {
             print("❌ fetchTasks error: \(error.localizedDescription)")
         }
     }
-
     private var timeFormatter: DateFormatter {
         let f = DateFormatter()
         f.dateFormat = "hh:mm a"
         return f
     }
-
     // MARK: - SAVE NEW AGENDA (local + Firestore)
-
     /// Saves agenda locally and writes to Firestore under the forced caregiver (Budi).
     func saveNewAgenda() {
+        if selectedPerson == nil {
+            // If filter = All, force the first receiver as target
+            if let firstReceiver = persons.first {
+                print("⚠️ selectedPerson was nil (All filter). Defaulting to first receiver: \(firstReceiver.fullName)")
+                selectedPerson = firstReceiver
+            }
+        }
         print("saveNewAgenda called — type=\(newAgendaType) title='\(newAgendaTitle)' selectedPerson='\(selectedPerson?.fullName ?? "nil")' time=\(newAgendaTimeDate)")
-
         // validate receiver
         guard let receiver = selectedPerson else {
             print("saveNewAgenda -> abort: selectedPerson (receiver) is nil")
             return
         }
-
         // prevent past date unless confirmed
         let calendar = Calendar.current
         let now = Date()
@@ -337,23 +303,18 @@ final class GiverCalendarVM: ObservableObject {
             showPastDateAlert = true
             return
         }
-
         // determine caregiver (forced)
         guard let caregiver = currentCaregiver ?? users.first(where: { $0.role.lowercased().contains("caregiv") }) else {
             print("❌ saveNewAgenda -> abort: no caregiver available")
             return
         }
         print("🔧 FORCED OWNER = caregiver '\(caregiver.fullName)'")
-
         // display time string
         let f = DateFormatter(); f.dateFormat = "hh:mm a"
         let timeString = f.string(from: newAgendaTimeDate)
-
         // title
         let finalTitle = newAgendaType == .medicine ? "💊 \(selectedMedicine?.medicineName ?? newAgendaTitle)" : newAgendaTitle
-
         let dateKey = dateKey(from: selectedDate)
-
         let localItem = AgendaItem(
             id: UUID().uuidString,
             title: finalTitle,
@@ -368,8 +329,6 @@ final class GiverCalendarVM: ObservableObject {
             medicineName: selectedMedicine?.medicineName,      // ← FIXED
             medicineImage: selectedMedicine?.medicineImage     // ← FIXED
         )
-
-
         // Store locally under receiver
         var receiverMap = agendaData[receiver.fullName] ?? [:]
         var dayList = receiverMap[dateKey] ?? []
@@ -377,37 +336,29 @@ final class GiverCalendarVM: ObservableObject {
         receiverMap[dateKey] = dayList
         agendaData[receiver.fullName] = receiverMap
         print("Local cache updated for receiver '\(receiver.fullName)' date '\(dateKey)' — dayListCount: \(dayList.count)")
-
         // Write to Firestore
         Task {
             await createTaskInFirestore(from: localItem, caregiver: caregiver, receiver: receiver)
         }
-
         // reset
         confirmSavePastAgenda = false
         resetNewAgendaFields()
     }
-
     func confirmSavingPastAgenda() {
         confirmSavePastAgenda = true
         showPastDateAlert = false
         saveNewAgenda()
     }
-
     // MARK: - FIRESTORE: create task doc (auto-increment task_id)
-
     private func createTaskInFirestore(from agenda: AgendaItem, caregiver: Users, receiver: Users) async {
         print("createTaskInFirestore -> start (ownerUserId=\(caregiver.userId), receiverUserId=\(receiver.userId))")
-
         do {
             let nextTaskId = try await getNextTaskId()
             print("Next task_id = \(nextTaskId)")
-
             // merge date string + agenda.time into Timestamp
             // agenda.date is yyyy-MM-dd; agenda.time is "hh:mm a"
             let dueTimestamp = try mergeDateAndTimeToTimestamp(dateString: agenda.date, timeString: agenda.time)
             print("dueTimestamp = \(dueTimestamp.dateValue())")
-
             var data: [String: Any] = [
                 "task_id": nextTaskId,
                 "careGiver_id": caregiver.userId,
@@ -419,23 +370,18 @@ final class GiverCalendarVM: ObservableObject {
                 "is_completed": false,
                 "type": agenda.status.rawValue
             ]
-
             if let mid = agenda.medicineId { data["medicine_id"] = mid }
             else { data["medicine_id"] = NSNull() }
-
             // Write document with numeric string id (so it matches existing numeric docs if you want)
             let docId = String(nextTaskId)
             try await db.collection(tasksCollection).document(docId).setData(data)
             print("✅ Firestore: task created (task_id=\(nextTaskId), docId=\(docId))")
-
             // Refresh tasks for this receiver to replace local UUID items with persisted ones
             await fetchTasksForSelectedReceiver()
-
         } catch {
             print("❌ createTaskInFirestore error: \(error.localizedDescription)")
         }
     }
-
     // Auto-increment task_id: read highest task_id and +1 (best-effort)
     private func getNextTaskId() async throws -> Int {
         let snapshot = try await db.collection(tasksCollection)
@@ -448,7 +394,6 @@ final class GiverCalendarVM: ObservableObject {
             return 1
         }
     }
-
     // merge "yyyy-MM-dd" + "hh:mm a" -> Timestamp
     private func mergeDateAndTimeToTimestamp(dateString: String, timeString: String) throws -> Timestamp {
         let df = DateFormatter()
@@ -460,12 +405,9 @@ final class GiverCalendarVM: ObservableObject {
             throw NSError(domain: "WeCare.MergeDateError", code: -1)
         }
     }
-
     // MARK: - EDIT flow (local + Firestore best-effort)
-
     func startEditing(_ agenda: AgendaItem) {
         editAgendaOriginal = agenda
-
         if agenda.medicineId != nil {
             editAgendaTitle = agenda.medicineName ?? ""
             isTitleEditable = false
@@ -477,16 +419,13 @@ final class GiverCalendarVM: ObservableObject {
             }
             isTitleEditable = true
         }
-
         editAgendaDescription = agenda.description
-
         let df = DateFormatter(); df.dateFormat = "hh:mm a"
         editAgendaTimeDate = df.date(from: agenda.time) ?? Date()
         editAgendaStatus = agenda.status
         // default owner for edit — we keep to forced caregiver when saving
         editAgendaOwner = currentCaregiver
         editAgendaType = agenda.medicineId != nil ? .medicine : .activity
-
         // restore medicine selection if needed
         if editAgendaType == .medicine {
             selectedMedicine = Medicines(
@@ -500,21 +439,17 @@ final class GiverCalendarVM: ObservableObject {
         } else {
             selectedMedicine = nil
         }
-
         showingEditAgenda = true
     }
-
     func saveEditedAgenda() {
         print("saveEditedAgenda called")
         guard let original = editAgendaOriginal else { print("saveEditedAgenda -> original nil"); return }
         // always use forced caregiver as owner (Budi)
         guard let caregiver = currentCaregiver else { print("saveEditedAgenda -> no caregiver"); return }
         guard let receiver = selectedPerson else { print("saveEditedAgenda -> no receiver"); return }
-
         let key = dateKey(from: selectedDate)
         let f = DateFormatter(); f.dateFormat = "hh:mm a"
         let timeString = f.string(from: editAgendaTimeDate)
-
         let updated = AgendaItem(
             id: original.id,
             title: editAgendaType == .medicine ? "💊 \(selectedMedicine?.medicineName ?? "")" : editAgendaTitle,
@@ -529,7 +464,6 @@ final class GiverCalendarVM: ObservableObject {
             medicineName: editAgendaType == .medicine ? selectedMedicine?.medicineName : nil,
             medicineImage: editAgendaType == .medicine ? selectedMedicine?.medicineImage : nil
         )
-
         // local: replace
         for p in persons {
             if removeAgenda(ownerName: p.fullName, dateKey: key, agenda: original) { break }
@@ -540,7 +474,6 @@ final class GiverCalendarVM: ObservableObject {
         receiverMap[key] = list
         agendaData[caregiver.fullName] = receiverMap
         print("Local edited agenda saved (id=\(updated.id))")
-
         // update Firestore best-effort: find doc(s) matching task_id or title
         Task {
             do {
@@ -563,10 +496,8 @@ final class GiverCalendarVM: ObservableObject {
                         .whereField("careGiver_id", isEqualTo: caregiver.userId)
                         .whereField("careReceiver_id", isEqualTo: receiver.userId)
                         .whereField("title", isEqualTo: original.title)
-
                     let snapshot = try await query.getDocuments()
                     print("saveEditedAgenda: matched \(snapshot.documents.count) documents")
-
                     for doc in snapshot.documents {
                         var updateData: [String: Any] = [
                             "title": updated.title,
@@ -579,50 +510,40 @@ final class GiverCalendarVM: ObservableObject {
                         print("Updated Firestore docId=\(doc.documentID)")
                     }
                 }
-
                 // refresh local
                 await fetchTasksForSelectedReceiver()
             } catch {
                 print("❌ saveEditedAgenda Firestore update error: \(error.localizedDescription)")
             }
         }
-
         showingEditAgenda = false
     }
-
     // MARK: - Colors / Helpers
-
     func colorForDay(_ day: Int) -> Color {
         let key = dateKey(forDay: day, in: dateByAddingMonths(currentMonthOffset))
         var statuses: [UrgencyStatus] = []
-
         func appendStatus(_ p: Users) {
             if let list = agendaData[p.fullName]?[key] {
                 statuses.append(contentsOf: list.map { $0.status })
             }
         }
-
         if let sel = selectedPerson { appendStatus(sel) }
         else { persons.forEach { appendStatus($0) } }
-
         if statuses.contains(.critical) { return .red.opacity(0.8) }
         if statuses.contains(.high)     { return .yellow.opacity(0.7) }
         if statuses.contains(.medium)   { return .blue.opacity(0.7) }
         if statuses.contains(.low)      { return .green.opacity(0.7) }
         return .gray.opacity(0.15)
     }
-
     func dateKey(from date: Date) -> String {
         let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
         return f.string(from: date)
     }
-
     func dateKey(forDay day: Int, in base: Date) -> String {
         var comps = Calendar.current.dateComponents([.year, .month], from: base)
         comps.day = day
         return dateKey(from: Calendar.current.date(from: comps) ?? base)
     }
-
     func combine(date: Date, time: Date) -> Date {
         let cal = Calendar.current
         let d = cal.dateComponents([.year, .month, .day], from: date)
@@ -632,7 +553,6 @@ final class GiverCalendarVM: ObservableObject {
                            hour: t.hour, minute: t.minute)
         ) ?? date
     }
-
     // MARK: - Reset form
     func resetNewAgendaFields() {
         newAgendaTitle = ""
@@ -645,3 +565,6 @@ final class GiverCalendarVM: ObservableObject {
         selectedMedicine = nil
     }
 }
+
+
+
