@@ -75,7 +75,7 @@ struct GiverCalendarView: View {
         }
     }
     private func filterButton(user: Users?, label: String) -> some View {
-        let isSelected = vm.selectedUser?.id == user?.id
+        let isSelected = vm.selectedPerson?.id == user?.id
         return Button {
             vm.selectedPerson = user
         } label: {
@@ -185,10 +185,11 @@ struct GiverCalendarView: View {
                                 item.medicineId != nil
                                 ? "💊 \(item.medicineName ?? "Unknown Medicine")"
                                 : item.title
+                            let shownOwner = vm.selectedPerson?.fullName ?? item.ownerName
                             agendaItem(title: displayTitle,
                                        time: item.time,
                                        status: item.status,
-                                       owner: item.ownerName)
+                                       owner: shownOwner)
                         }
                         .buttonStyle(.plain)
                     }
@@ -362,14 +363,20 @@ struct GiverCalendarView: View {
     private var vmEditAgendaSheet: some View {
         ZStack {
             Color(hex: "#FDFBF8").ignoresSafeArea()
+
             VStack(spacing: 0) {
+
                 HStack {
                     Button("Cancel") { vm.showingEditAgenda = false }
                         .foregroundColor(Color(hex: "#fa6255"))
+
                     Spacer()
+
                     Text("Edit Agenda")
                         .font(.headline.bold())
+
                     Spacer()
+
                     Button("Save") {
                         vm.saveEditedAgenda()
                         vm.showingEditAgenda = false
@@ -380,18 +387,40 @@ struct GiverCalendarView: View {
                 .padding()
                 .background(Color.white)
                 .shadow(color: Color.black.opacity(0.05), radius: 2, y: 2)
+
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 30) {
+
                         sectionCard(title: "Agenda Details") {
                             VStack(spacing: 12) {
-                                TextField("Title", text: $vm.editAgendaTitle)
-                                    .disabled(!vm.isTitleEditable)
-                                       .opacity(vm.isTitleEditable ? 1.0 : 0.5)
+
+                                // TITLE (Dynamic)
+                                if vm.editAgendaType == .medicine {
+                                    // READ-ONLY LABEL
+                                    HStack {
+                                        Text("Medicine")
+                                            .font(.headline)
+                                        Spacer()
+                                        Text(vm.editAgendaTitle)
+                                            .font(.body)
+                                            .foregroundColor(.gray)
+                                            .lineLimit(1)
+                                    }
                                     .padding(.horizontal, 10)
+
+                                } else {
+                                    // NORMAL TEXTFIELD
+                                    TextField("Title", text: $vm.editAgendaTitle)
+                                        .padding(.horizontal, 10)
+                                }
+
                                 Divider()
+
                                 TextField("Description (Optional)", text: $vm.editAgendaDescription)
                                     .padding(.horizontal, 10)
+
                                 Divider()
+
                                 HStack {
                                     Text("Select Time")
                                     Spacer()
@@ -401,6 +430,8 @@ struct GiverCalendarView: View {
                                 .padding(.horizontal, 10)
                             }
                         }
+
+                        // ────────── FOR WHO ──────────
                         sectionCard(title: "For Who") {
                             Picker("Select Person", selection: $vm.editAgendaOwner) {
                                 Text("Choose Person").tag(nil as Users?)
@@ -410,6 +441,8 @@ struct GiverCalendarView: View {
                             }
                             .padding(.horizontal, 5)
                         }
+
+                        // ────────── URGENCY ──────────
                         sectionCard(title: "Urgency Status") {
                             Picker("Status", selection: $vm.editAgendaStatus) {
                                 Text("Low").tag(UrgencyStatus.low)
@@ -431,6 +464,7 @@ struct GiverCalendarView: View {
         }
         .presentationDetents([.large])
     }
+
     private func agendaDetailView(_ agenda: AgendaItem) -> some View {
         ScrollView {   // ← FIX: ensures image fully appears
             VStack(alignment: .leading, spacing: 16) {
@@ -472,7 +506,7 @@ struct GiverCalendarView: View {
                     Text(agenda.title)
                         .font(.title2.bold())
                 }
-                Text("By \(agenda.ownerName)")
+                Text("For \(vm.selectedPerson?.fullName ?? agenda.ownerName)")
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "#b87cf5"))
                 HStack {
