@@ -25,6 +25,7 @@ struct AgendaItem: Identifiable, Hashable, Codable {
     var medicineId: Int?
     var medicineName: String?
     var medicineImage: String?
+    var isCompleted: Bool = false
 
     init(
         id: String,
@@ -38,7 +39,8 @@ struct AgendaItem: Identifiable, Hashable, Codable {
         ownerName: String,
         medicineId: Int? = nil,
         medicineName: String? = nil,
-        medicineImage: String? = nil
+        medicineImage: String? = nil,
+        isCompleted: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -52,6 +54,7 @@ struct AgendaItem: Identifiable, Hashable, Codable {
         self.medicineId = medicineId
         self.medicineName = medicineName
         self.medicineImage = medicineImage
+        self.isCompleted = isCompleted
     }
 }
 

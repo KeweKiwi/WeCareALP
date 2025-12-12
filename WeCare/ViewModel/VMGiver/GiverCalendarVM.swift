@@ -16,7 +16,14 @@ final class GiverCalendarVM: ObservableObject {
     // ===== UI STATE =====
     @Published var selectedDate: Date = Date()
     @Published var currentMonthOffset: Int = 0
-    @Published var selectedPerson: Users? = nil         // selected careReceiver
+    @Published var selectedPerson: Users? = nil {
+        didSet {
+            // whenever selectedPerson changes, re-attach listener and fetch once
+            Task {
+                await setupTasksListener()
+            }
+        }
+    }
     // ===== ADD-AGENDA SHEET =====
     @Published var showingAddAgenda = false
     @Published var newAgendaTitle = ""
@@ -47,12 +54,18 @@ final class GiverCalendarVM: ObservableObject {
     // agendaData organized by receiver's fullName
     @Published var agendaData: [String: [String: [AgendaItem]]] = [:]
     
-    
     private let db = Firestore.firestore()
     private let tasksCollection = "Tasks" // root collection as per your screenshot
-    // MARK: - Initialization / caregiver forcing
-    /// Call updateUsers when UsersTableViewModel publishes users.
-    /// This will set the forced caregiver (Budi) and keep `persons` to receivers only.
+    private var tasksListener: ListenerRegistration? = nil
+
+    private func detachTasksListener() {
+        if let l = tasksListener {
+            l.remove()
+            tasksListener = nil
+            print("🔌 Detached previous tasks listener")
+        }
+    }
+
     func updateUsers(_ newUsers: [Users]) {
         print("VM.updateUsers called — count: \(newUsers.count)")
         self.users = newUsers
@@ -198,6 +211,96 @@ final class GiverCalendarVM: ObservableObject {
             await fetchTasksForSelectedReceiver()
         }
     }
+    
+    /// Attach a real-time listener for the selected receiver (and forced caregiver if present).
+    /// This keeps `agendaData` up-to-date automatically when any `is_completed` or other fields change.
+    func setupTasksListener() async {
+        // detach existing
+        detachTasksListener()
+
+        guard let receiver = selectedPerson else {
+            print("⚠️ setupTasksListener aborted: no selectedPerson")
+            return
+        }
+
+        print("setupTasksListener -> attaching for receiver='\(receiver.fullName)' (userId=\(receiver.userId))")
+
+        var query: Query = db.collection(tasksCollection).whereField("careReceiver_id", isEqualTo: receiver.userId)
+
+        if let giver = currentCaregiver {
+            query = query.whereField("careGiver_id", isEqualTo: giver.userId)
+            print("setupTasksListener: additionally filtering by careGiver_id=\(giver.userId)")
+        }
+
+        // attach snapshot listener
+        tasksListener = query.addSnapshotListener { [weak self] snapshot, error in
+            guard let self = self else { return }
+            if let error = error {
+                print("❌ tasks listener error: \(error.localizedDescription)")
+                return
+            }
+            guard let snapshot = snapshot else {
+                print("⚠️ tasks listener: snapshot nil")
+                return
+            }
+
+            var newAgendaForReceiver: [String: [AgendaItem]] = [:]
+
+            for doc in snapshot.documents {
+                let data = doc.data()
+                let caregiverUserId = data["careGiver_id"] as? Int ?? 0
+                let caregiver = self.users.first { $0.userId == caregiverUserId }
+
+                let title = data["title"] as? String ?? ""
+                let description = data["description"] as? String ?? ""
+                let typeString = (data["type"] as? String) ?? UrgencyStatus.low.rawValue
+                let medicineId = data["medicine_id"] as? Int
+                let dueTimestamp = (data["due_time"] as? Timestamp)?.dateValue() ?? Date()
+                let dateKey = self.dateKey(from: dueTimestamp)
+                let timeString = self.timeFormatter.string(from: dueTimestamp)
+
+                // parse completed
+                let isCompleted = data["is_completed"] as? Bool ?? false
+
+                var medName: String? = nil
+                var medImage: String? = nil
+                if let medId = medicineId {
+                    if let med = self.medicines.first(where: { $0.medicineId == medId }) {
+                        medName = med.medicineName
+                        medImage = med.medicineImage
+                    } else {
+                        print("⚠️ MedicineID \(medId) not found in medicines list")
+                    }
+                }
+
+                let agenda = AgendaItem(
+                    id: doc.documentID,
+                    title: title,
+                    description: description,
+                    time: timeString,
+                    date: dateKey,
+                    status: UrgencyStatus(rawValue: typeString) ?? .low,
+                    type: (medicineId == nil ? .activity : .medicine),
+                    ownerId: caregiver?.id ?? "",
+                    ownerName: caregiver?.fullName ?? "Unknown",
+                    medicineId: medicineId,
+                    medicineName: medName,
+                    medicineImage: medImage,
+                    isCompleted: isCompleted
+                )
+
+                var arr = newAgendaForReceiver[dateKey] ?? []
+                arr.append(agenda)
+                newAgendaForReceiver[dateKey] = arr
+            }
+
+            DispatchQueue.main.async {
+                self.agendaData[receiver.fullName] = newAgendaForReceiver
+                print("🔔 tasksListener updated agendaData[\(receiver.fullName)] (keys: \(newAgendaForReceiver.keys.count))")
+            }
+        }
+    }
+
     // MARK: - FIRESTORE: Fetch tasks for selected receiver
     func fetchTasksForSelectedReceiver() async {
         
@@ -244,8 +347,10 @@ final class GiverCalendarVM: ObservableObject {
                     }
                 }
                 
+                let isCompleted = data["is_completed"] as? Bool ?? false
+
                 let agenda = AgendaItem(
-                    id: doc.documentID, // use Firestore docID for persisted items
+                    id: doc.documentID,
                     title: title,
                     description: description,
                     time: timeString,
@@ -254,10 +359,12 @@ final class GiverCalendarVM: ObservableObject {
                     type: (medicineId == nil ? .activity : .medicine),
                     ownerId: caregiver?.id ?? "",
                     ownerName: caregiver?.fullName ?? "Unknown",
-                    medicineId: medicineId,            // ← FIXED
+                    medicineId: medicineId,
                     medicineName: medName,
-                    medicineImage: medImage
+                    medicineImage: medImage,
+                    isCompleted: isCompleted
                 )
+
                 print("  → parsed task docId=\(doc.documentID) title='\(title)' date=\(dateKey) time=\(timeString) caregiverUserId=\(caregiverUserId)")
                 var arr = newAgendaForReceiver[dateKey] ?? []
                 arr.append(agenda)

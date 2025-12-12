@@ -192,7 +192,9 @@ struct GiverCalendarView: View {
                             agendaItem(title: displayTitle,
                                        time: item.time,
                                        status: item.status,
-                                       owner: shownOwner)
+                                       owner: shownOwner,
+                                       isCompleted: item.isCompleted
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -211,21 +213,55 @@ struct GiverCalendarView: View {
             Text(text).font(.caption).foregroundColor(.gray)
         }
     }
-    private func agendaItem(title: String, time: String, status: UrgencyStatus, owner: String) -> some View {
+    private func agendaItem(title: String, time: String, status: UrgencyStatus, owner: String, isCompleted: Bool = false) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(owner).font(.caption.bold()).foregroundColor(Color(hex: "#b87cf5"))
-                Text(title).font(.subheadline.bold()).foregroundColor(.black)
-                Text(time).font(.caption).foregroundColor(.gray)
+                HStack {
+                    Text(owner)
+                        .font(.caption.bold())
+                        .foregroundColor(Color(hex: "#b87cf5"))
+                    if isCompleted {
+                        Spacer(minLength: 6)
+                        Text("Done")
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.green.opacity(0.15))
+                            .cornerRadius(10)
+                            .foregroundColor(.green)
+                    }
+                }
+
+                Text(title)
+                    .font(.subheadline.bold())
+                    .foregroundColor(isCompleted ? .gray : .black)
+                    .strikethrough(isCompleted, color: .gray)
+
+                Text(time)
+                    .font(.caption)
+                    .foregroundColor(.gray)
             }
             Spacer()
-            Circle().fill(color(for: status)).frame(width: 18, height: 18)
+            Circle()
+                .fill(color(for: status))
+                .frame(width: 18, height: 18)
+                .overlay(
+                    // small check overlay when completed
+                    Group {
+                        if isCompleted {
+                            Image(systemName: "checkmark")
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                        } else { EmptyView() }
+                    }
+                )
         }
         .padding()
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 3, y: 2)
     }
+
     private func color(for status: UrgencyStatus) -> Color {
         switch status {
         case .low: return Color(hex: "#a6d17d")
@@ -491,6 +527,11 @@ struct GiverCalendarView: View {
                     // Normal activity title
                     Text(agenda.title)
                         .font(.title2.bold())
+                }
+                if agenda.isCompleted {
+                    Text("✅ Completed")
+                        .font(.caption.bold())
+                        .foregroundColor(.green)
                 }
                 Text("For \(vm.selectedPerson?.fullName ?? agenda.ownerName)")
                     .font(.subheadline)
