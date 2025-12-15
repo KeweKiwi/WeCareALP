@@ -11,7 +11,7 @@ struct GiverCalendarView: View {
     @StateObject var medicinesVM = MedicinesViewModel()
     var body: some View {
         ZStack {
-            Color(hex: "#FDFBF8").ignoresSafeArea()
+            Color(hex: "#FFFFFF").ignoresSafeArea()
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 28) {
                     header

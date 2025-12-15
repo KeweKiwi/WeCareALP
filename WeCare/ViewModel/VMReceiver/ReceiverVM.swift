@@ -476,6 +476,102 @@ class ReceiverVM: ObservableObject {
         self.sleepDuration = 0.0
         self.oxygenSaturation = 98.5
     }
+    
+    // MARK: - Date Helper (Today Only)
+    private func todayRange() -> (start: Date, end: Date) {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: Date())
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        return (startOfDay, endOfDay)
+    }
+    
+    // MARK: - 2A. Fetch TODAY Tasks → Firestore (Dashboard)
+    func fetchTodayTasks(forReceiverId userId: Int) {
+     let range = todayRange()
+     let cal = Calendar.current
+    db.collection("Tasks")
+        .whereField("careReceiver_id", isEqualTo: userId)
+        .addSnapshotListener { [weak self] snapshot, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                print("❌ Error fetching tasks:", error.localizedDescription)
+                self.tasks = []
+                return
+            }
+
+            let allTasks = (snapshot?.documents ?? []).map {
+                Tasks(id: $0.documentID, data: $0.data())
+            }
+
+            self.tasks = allTasks
+                .filter { task in
+                    guard let due = task.dueTime else { return false }
+                    return due >= range.start && due < range.end
+                }
+                .sorted { ($0.dueTime ?? .distantFuture) < ($1.dueTime ?? .distantFuture) }
+        }
+
+    }
+
+
+    
+    func debugFetchAllTasksAndPrint(forReceiverId userId: Int) {
+     db.collection("Tasks")
+     .whereField("careReceiver_id", isEqualTo: userId)
+     .getDocuments { snapshot, error in
+     if let error = error as NSError? {
+     print("❌ debugFetchAllTasksAndPrint error:", error.domain, error.code, error.localizedDescription)
+     return
+     }
+           let docs = snapshot?.documents ?? []
+            print("✅ debugFetchAllTasksAndPrint count:", docs.count)
+
+            for d in docs {
+                let data = d.data()
+                let due = data["due_time"]
+                print("Doc:", d.documentID, "title:", data["title"] ?? "-", "due_time:", due ?? "nil", "type:", String(describing: type(of: due as Any)))
+            }
+        }
+
+    }
+    func debugFetchTodayTasksAndPrint(forReceiverId userId: Int) {
+     var calendar = Calendar(identifier: .gregorian)
+     calendar.timeZone = TimeZone.current
+    let start = calendar.startOfDay(for: Date())
+    let end = calendar.date(byAdding: .day, value: 1, to: start)!
+
+    let startTS = Timestamp(date: start)
+    let endTS = Timestamp(date: end)
+
+    print("🕒 debug range start:", start, "end:", end)
+
+    db.collection("Tasks")
+        .whereField("careReceiver_id", isEqualTo: userId)
+        .whereField("due_time", isGreaterThanOrEqualTo: startTS)
+        .whereField("due_time", isLessThan: endTS)
+        .order(by: "due_time")
+        .getDocuments { snapshot, error in
+            if let error = error as NSError? {
+                print("❌ debugFetchTodayTasksAndPrint error:", error.domain, error.code, error.localizedDescription)
+                return
+            }
+
+            let docs = snapshot?.documents ?? []
+            print("✅ debugFetchTodayTasksAndPrint count:", docs.count)
+
+            for d in docs {
+                let data = d.data()
+                let due = data["due_time"]
+                print("Doc:", d.documentID, "title:", data["title"] ?? "-", "due_time:", due ?? "nil")
+            }
+        }
+
+    }
+
+
+
+
 }
 
 

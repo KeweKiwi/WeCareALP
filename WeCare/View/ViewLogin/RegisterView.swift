@@ -96,7 +96,7 @@ struct FamilyCodeView: View {
     
     var body: some View {
         ZStack {
-            Brand.vlight.opacity(0.25).ignoresSafeArea()
+            
             
             ScrollView {
                 VStack(spacing: 20) {
@@ -208,7 +208,7 @@ struct FamilyCodeView: View {
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "info.circle.fill")
                                 .font(.title3)
-                                .foregroundStyle(Brand.sky)
+                                .foregroundStyle(.white)
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Don’t see the code?")

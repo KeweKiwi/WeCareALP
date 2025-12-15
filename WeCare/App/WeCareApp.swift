@@ -27,7 +27,7 @@ struct WeCareApp: App {
     
     var body: some Scene {
         WindowGroup {
-            RootView()   // ⬅️ use your RootView here
+            RootView()  
         }
     }
 }

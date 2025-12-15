@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ReceiverDashboardView: View {
-    @StateObject var viewModel = ReceiverVM()
+    @ObservedObject var viewModel: ReceiverVM
     
     private let stepGoal = 6000
     private let currentUserId = 2
@@ -50,7 +50,8 @@ struct ReceiverDashboardView: View {
                         completedTasks: viewModel.tasks.filter { $0.isCompleted }.count,
                         totalTasks: viewModel.tasks.count,
                         currentSteps: viewModel.steps,
-                        goalSteps: stepGoal
+                        goalSteps: stepGoal,
+                        hasTasks: !viewModel.tasks.isEmpty
                     )
                     .padding(.horizontal)
                     
@@ -62,7 +63,7 @@ struct ReceiverDashboardView: View {
                             .padding(.horizontal)
                         
                         if viewModel.tasks.isEmpty {
-                            Text("No tasks found.")
+                            Text("No tasks for today 🎉.")
                                 .font(.title3)
                                 .foregroundColor(.gray)
                                 .padding(30)
@@ -82,16 +83,27 @@ struct ReceiverDashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarHidden(true)
             .background(Color(.systemGray6).ignoresSafeArea())
+//            .onAppear {
+//                // 1. Fetch User Profile (Name)
+//                viewModel.fetchUserProfile(userId: currentUserId)
+//                
+//                // 2. Fetch Tasks
+//                viewModel.fetchTodayTasks(forReceiverId: currentUserId)
+//                
+//                // 3. Fetch Steps
+//                viewModel.fetchLatestSteps(forUserId: currentUserId)
+//            }
             .onAppear {
-                // 1. Fetch User Profile (Name)
-                viewModel.fetchUserProfile(userId: currentUserId)
-                
-                // 2. Fetch Tasks
-                viewModel.fetchTasks(forReceiverId: currentUserId)
-                
-                // 3. Fetch Steps
-                viewModel.fetchLatestSteps(forUserId: currentUserId)
+             viewModel.fetchUserProfile(userId: currentUserId)
+            viewModel.debugFetchAllTasksAndPrint(forReceiverId: currentUserId)
+            viewModel.debugFetchTodayTasksAndPrint(forReceiverId: currentUserId)
+
+            viewModel.fetchTodayTasks(forReceiverId: currentUserId)
+            viewModel.fetchLatestSteps(forUserId: currentUserId)
+
             }
+
+
         }
     }
 }
@@ -103,6 +115,7 @@ struct TaskAndStepsProgressCard: View {
     var totalTasks: Int
     var currentSteps: Int
     var goalSteps: Int
+    var hasTasks: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -145,27 +158,32 @@ struct TaskAndStepsProgressCard: View {
                     .font(.largeTitle)
                     .foregroundColor(Color(hex: "#91bef8"))
             }
-            if taskCompletionPercentage < 100 {
+            if hasTasks {
                 Divider()
-                HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(Color(hex: "#fdcb46"))
-                        .font(.title2)
-                    Text("Keep striving! You have pending goals.")
-                        .font(.headline)
-                        .foregroundColor(.black.opacity(0.7))
-                }
-            } else {
-                Divider()
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(Color(hex: "#a6d17d"))
-                        .font(.title2)
-                    Text("All goals for today are complete! 👍")
-                        .font(.headline.bold())
-                        .foregroundColor(Color(hex: "#a6d17d"))
+                
+                if taskCompletionPercentage < 100 {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(Color(hex: "#fdcb46"))
+                            .font(.title2)
+                        
+                        Text("Keep striving! You have pending goals.")
+                            .font(.headline)
+                            .foregroundColor(.black.opacity(0.7))
+                    }
+                } else {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(Color(hex: "#a6d17d"))
+                            .font(.title2)
+                        
+                        Text("All goals for today are complete! 👍")
+                            .font(.headline.bold())
+                            .foregroundColor(Color(hex: "#a6d17d"))
+                    }
                 }
             }
+
         }
         .padding(25)
         .background(Color.white)
@@ -219,7 +237,7 @@ struct ReminderItem: View {
 }
 
 #Preview {
-    ReceiverDashboardView()
+    ReceiverDashboardView(viewModel: ReceiverVM())
 }
 
 // versi non database
@@ -233,8 +251,7 @@ struct ReminderItem: View {
 //    private var stepProgressPercentage: Int {
 //        min(Int(Double(viewModel.steps) / Double(stepGoal) * 100), 100)
 //    }
-//    
-//    var body: some View {
+//
 //        NavigationView {
 //            ScrollView {
 //                VStack(spacing: 25) { // Spasi antara elemen
