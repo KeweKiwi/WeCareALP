@@ -1,7 +1,7 @@
 import SwiftUI
 struct ReceiverView: View {
     // ViewModel is the single source of truth for all Views
-    @StateObject var viewModel = ReceiverVM()
+    @StateObject private var viewModel = ReceiverVM()
     
     var body: some View {
         NavigationStack {
