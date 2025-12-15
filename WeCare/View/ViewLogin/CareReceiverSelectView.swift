@@ -133,7 +133,7 @@ struct CareReceiverSelectView: View {
                 // --- Navigation ---
                 // Ensure ReceiverView and ReceiverVM exist in your project
                 NavigationLink(
-                    destination: ReceiverView(viewModel: ReceiverVM()),
+                    destination: ReceiverView(),
                     isActive: $goDashboard
                 ) {
                     EmptyView()
