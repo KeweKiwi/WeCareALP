@@ -4,10 +4,10 @@
 //
 //  Created by student on 26/11/25.
 //
-
 import SwiftUI
 import CoreLocation
 import Combine
+import AVFoundation
 
 struct VolunteerVideoCallView: View {
     let volunteer: Volunteer
@@ -19,6 +19,8 @@ struct VolunteerVideoCallView: View {
     @State private var isMuted: Bool = false
     @State private var isCameraOff: Bool = false
     @State private var callDuration: Int = 0
+    
+    @StateObject private var camera = CameraService()
     
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -72,31 +74,51 @@ struct VolunteerVideoCallView: View {
                             Spacer()
                             
                             ZStack(alignment: .bottomTrailing) {
-                                // Kotak kamera kecil
+                                // Kotak kamera kecil (background tetep)
                                 RoundedRectangle(cornerRadius: 16)
                                     .fill(isCameraOff ? Color.gray.opacity(0.85)
                                                       : Color.black.opacity(0.85))
                                     .frame(width: 120, height: 160)
                                 
-                                // Isi utama (ikon + text) di TENGAH
-                                VStack(spacing: 6) {
+                                // Isi utama: kalau camera ON => preview kamera beneran (front/self POV)
+                                ZStack {
                                     if isCameraOff {
-                                        Image(systemName: "video.slash.fill")
-                                            .font(.system(size: 36))
-                                            .foregroundColor(.white)
-                                        Text("Camera Off")
-                                            .font(.caption)
-                                            .foregroundColor(.white.opacity(0.9))
+                                        VStack(spacing: 6) {
+                                            Image(systemName: "video.slash.fill")
+                                                .font(.system(size: 36))
+                                                .foregroundColor(.white)
+                                            Text("Camera Off")
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.9))
+                                        }
                                     } else {
-                                        Image(systemName: "person.crop.circle.fill")
-                                            .font(.system(size: 40))
-                                            .foregroundColor(.white)
-                                        Text("You")
-                                            .font(.caption)
-                                            .foregroundColor(.white.opacity(0.9))
+                                        CameraPreviewView(session: camera.session)
+                                            .overlay(
+                                                // Kalau ada error configure, tampilkan kecil aja biar ga ganggu UI
+                                                Group {
+                                                    if let err = camera.lastError {
+                                                        Text(err)
+                                                            .font(.system(size: 10))
+                                                            .foregroundColor(.white)
+                                                            .padding(6)
+                                                            .background(Color.red.opacity(0.75))
+                                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                            .padding(6)
+                                                    }
+                                                },
+                                                alignment: .topLeading
+                                            )
+                                            .overlay(
+                                                Text("You")
+                                                    .font(.caption)
+                                                    .foregroundColor(.white.opacity(0.9))
+                                                    .padding(6),
+                                                alignment: .bottomLeading
+                                            )
                                     }
                                 }
-                                .frame(width: 120, height: 160) // supaya benar-benar center
+                                .frame(width: 120, height: 160)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
                                 
                                 // Status MIC (off-mic) di pojok kanan bawah DALAM kotak
                                 if isMuted {
@@ -150,6 +172,11 @@ struct VolunteerVideoCallView: View {
                     // Camera toggle (POV caregiver / kotak kecil)
                     Button(action: {
                         isCameraOff.toggle()
+                        if isCameraOff {
+                            camera.stop()
+                        } else {
+                            camera.startFrontCamera()
+                        }
                     }) {
                         Image(systemName: isCameraOff ? "video.slash.fill" : "video.fill")
                             .font(.title2)
@@ -161,6 +188,7 @@ struct VolunteerVideoCallView: View {
                     
                     // End call
                     Button(action: {
+                        camera.stop()
                         dismiss()
                     }) {
                         Image(systemName: "phone.down.fill")
@@ -180,6 +208,14 @@ struct VolunteerVideoCallView: View {
                 callDuration += 1
             }
         }
+        .onAppear {
+            if !isCameraOff {
+                camera.startFrontCamera()
+            }
+        }
+        .onDisappear {
+            camera.stop()
+        }
     }
     
     // MARK: - Helpers
@@ -187,6 +223,133 @@ struct VolunteerVideoCallView: View {
         let m = seconds / 60
         let s = seconds % 60
         return String(format: "%02d:%02d", m, s)
+    }
+}
+
+// MARK: - Camera Engine (robust)
+
+final class CameraService: ObservableObject {
+    let session = AVCaptureSession()
+    private let sessionQueue = DispatchQueue(label: "camera.session.queue")
+    private var isConfigured = false
+    
+    @Published var lastError: String? = nil
+    
+    func startFrontCamera() {
+        lastError = nil
+        
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        if status == .denied || status == .restricted {
+            DispatchQueue.main.async {
+                self.lastError = "Camera access denied/restricted"
+            }
+            return
+        }
+        
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+            guard granted else {
+                DispatchQueue.main.async { self.lastError = "Camera permission not granted" }
+                return
+            }
+            
+            self.sessionQueue.async {
+                if !self.isConfigured {
+                    let ok = self.configureFrontCameraUsingDiscovery()
+                    self.isConfigured = ok
+                    if !ok { return }
+                }
+                
+                if !self.session.isRunning {
+                    self.session.startRunning()
+                }
+            }
+        }
+    }
+    
+    func stop() {
+        sessionQueue.async {
+            if self.session.isRunning {
+                self.session.stopRunning()
+            }
+        }
+    }
+    
+    private func configureFrontCameraUsingDiscovery() -> Bool {
+        session.beginConfiguration()
+        session.sessionPreset = .high
+        
+        // Clear existing inputs
+        for input in session.inputs {
+            session.removeInput(input)
+        }
+        
+        // Lebih aman daripada .default(...):
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [
+                .builtInTrueDepthCamera,
+                .builtInWideAngleCamera
+            ],
+            mediaType: .video,
+            position: .front
+        )
+        
+        guard let device = discovery.devices.first else {
+            session.commitConfiguration()
+            DispatchQueue.main.async { self.lastError = "Front camera not found" }
+            return false
+        }
+        
+        do {
+            let input = try AVCaptureDeviceInput(device: device)
+            guard session.canAddInput(input) else {
+                session.commitConfiguration()
+                DispatchQueue.main.async { self.lastError = "Cannot add camera input" }
+                return false
+            }
+            session.addInput(input)
+            session.commitConfiguration()
+            return true
+        } catch {
+            session.commitConfiguration()
+            DispatchQueue.main.async { self.lastError = "Camera input error: \(error.localizedDescription)" }
+            return false
+        }
+    }
+}
+
+// MARK: - Preview Layer (super stable in SwiftUI)
+
+final class PreviewView: UIView {
+    override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+    
+    var videoLayer: AVCaptureVideoPreviewLayer {
+        layer as! AVCaptureVideoPreviewLayer
+    }
+    
+    var session: AVCaptureSession? {
+        get { videoLayer.session }
+        set { videoLayer.session = newValue }
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        videoLayer.frame = bounds
+        videoLayer.videoGravity = .resizeAspectFill
+    }
+}
+
+struct CameraPreviewView: UIViewRepresentable {
+    let session: AVCaptureSession
+    
+    func makeUIView(context: Context) -> PreviewView {
+        let v = PreviewView()
+        v.backgroundColor = .black
+        v.session = session
+        return v
+    }
+    
+    func updateUIView(_ uiView: PreviewView, context: Context) {
+        uiView.session = session
     }
 }
 

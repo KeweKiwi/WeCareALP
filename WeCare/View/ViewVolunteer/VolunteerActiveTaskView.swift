@@ -6,6 +6,7 @@
 //
 import SwiftUI
 import Combine
+import AVFoundation
 
 struct VolunteerActiveTaskView: View {
     let task: VolunteerRequest
@@ -79,8 +80,6 @@ struct VolunteerActiveTaskView: View {
             Divider()
             
             // Scroll area
-            // VolunteerActiveTaskView.swift – di dalam body, bagian ScrollView
-
             ScrollView {
                 VStack(spacing: 16) {
                     // Info task
@@ -148,7 +147,6 @@ struct VolunteerActiveTaskView: View {
                 }
                 .padding(.bottom, 8)
             }
-
             
             // Input + simulate link
             VStack(alignment: .leading, spacing: 4) {
@@ -271,11 +269,7 @@ struct VolunteerChatBubble: View {
     }
 }
 
-
-
-
 // MARK: - Simple Call View (POV Volunteer → Caregiver)
-
 struct VolunteerTaskCallView: View {
     let contactName: String
     
@@ -396,7 +390,6 @@ struct VolunteerTaskCallView: View {
 }
 
 // MARK: - Simple Video Call View (POV Volunteer → Caregiver)
-
 struct VolunteerTaskVideoCallView: View {
     let contactName: String
     
@@ -407,6 +400,8 @@ struct VolunteerTaskVideoCallView: View {
     @State private var isMuted: Bool = false
     @State private var isCameraOff: Bool = false
     @State private var callDuration: Int = 0
+    
+    @StateObject private var camera = CameraService()
     
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -453,7 +448,7 @@ struct VolunteerTaskVideoCallView: View {
                     }
                     .padding(.horizontal)
                     
-                    // Local preview – volunteer (you)
+                    // Local preview – volunteer (you) => KAMERA BENERAN
                     VStack {
                         Spacer()
                         HStack {
@@ -465,24 +460,43 @@ struct VolunteerTaskVideoCallView: View {
                                                       : Color.black.opacity(0.85))
                                     .frame(width: 120, height: 160)
                                 
-                                VStack(spacing: 6) {
+                                ZStack {
                                     if isCameraOff {
-                                        Image(systemName: "video.slash.fill")
-                                            .font(.system(size: 36))
-                                            .foregroundColor(.white)
-                                        Text("Camera Off")
-                                            .font(.caption)
-                                            .foregroundColor(.white.opacity(0.9))
+                                        VStack(spacing: 6) {
+                                            Image(systemName: "video.slash.fill")
+                                                .font(.system(size: 36))
+                                                .foregroundColor(.white)
+                                            Text("Camera Off")
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.9))
+                                        }
                                     } else {
-                                        Image(systemName: "person.crop.circle.fill")
-                                            .font(.system(size: 40))
-                                            .foregroundColor(.white)
-                                        Text("You")
-                                            .font(.caption)
-                                            .foregroundColor(.white.opacity(0.9))
+                                        CameraPreviewView(session: camera.session)
+                                            .overlay(
+                                                Group {
+                                                    if let err = camera.lastError {
+                                                        Text(err)
+                                                            .font(.system(size: 10))
+                                                            .foregroundColor(.white)
+                                                            .padding(6)
+                                                            .background(Color.red.opacity(0.75))
+                                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                            .padding(6)
+                                                    }
+                                                },
+                                                alignment: .topLeading
+                                            )
+                                            .overlay(
+                                                Text("You")
+                                                    .font(.caption)
+                                                    .foregroundColor(.white.opacity(0.9))
+                                                    .padding(6),
+                                                alignment: .bottomLeading
+                                            )
                                     }
                                 }
                                 .frame(width: 120, height: 160)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
                                 
                                 if isMuted {
                                     Image(systemName: "mic.slash.fill")
@@ -531,7 +545,14 @@ struct VolunteerTaskVideoCallView: View {
                     }
                     
                     // Camera toggle
-                    Button(action: { isCameraOff.toggle() }) {
+                    Button(action: {
+                        isCameraOff.toggle()
+                        if isCameraOff {
+                            camera.stop()
+                        } else {
+                            camera.startFrontCamera()
+                        }
+                    }) {
                         Image(systemName: isCameraOff ? "video.slash.fill" : "video.fill")
                             .font(.title2)
                             .foregroundColor(.white)
@@ -541,7 +562,10 @@ struct VolunteerTaskVideoCallView: View {
                     }
                     
                     // End call
-                    Button(action: { dismiss() }) {
+                    Button(action: {
+                        camera.stop()
+                        dismiss()
+                    }) {
                         Image(systemName: "phone.down.fill")
                             .font(.title2)
                             .foregroundColor(.white)
@@ -559,6 +583,14 @@ struct VolunteerTaskVideoCallView: View {
                 callDuration += 1
             }
         }
+        .onAppear {
+            if !isCameraOff {
+                camera.startFrontCamera()
+            }
+        }
+        .onDisappear {
+            camera.stop()
+        }
     }
     
     private func formatDuration(_ seconds: Int) -> String {
@@ -567,5 +599,4 @@ struct VolunteerTaskVideoCallView: View {
         return String(format: "%02d:%02d", m, s)
     }
 }
-
 
