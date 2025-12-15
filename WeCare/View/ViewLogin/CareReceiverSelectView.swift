@@ -13,7 +13,7 @@ struct CareReceiverSelectView: View {
     var body: some View {
         ZStack {
             // Background color using the Helper Extension below
-            Color(hex: "FFF9E6").ignoresSafeArea()
+            Color(hex: "FFFFFF").ignoresSafeArea()
             
             VStack {
                 ScrollView {
@@ -179,6 +179,8 @@ struct CareReceiverSelectView: View {
         }
     }
 }
+
+
 
 
 
