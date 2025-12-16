@@ -21,7 +21,7 @@ struct VolunteerRegistrationView: View {
     @State private var isKTPUploaded: Bool = false
     @State private var isSelfieUploaded: Bool = false
     
-    private let genders = ["Female", "Male", "Other"]
+    private let genders = ["Female", "Male"]
     
     // Palette
     private let yellow = Color(hex: "#fdcb46")
