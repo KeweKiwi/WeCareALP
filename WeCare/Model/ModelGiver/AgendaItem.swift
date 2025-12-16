@@ -13,20 +13,33 @@ enum AgendaType: String, Codable {
 
 struct AgendaItem: Identifiable, Hashable, Codable {
 
+    // MARK: - Identity
     var id: String                 // Firestore document ID
+
+    // MARK: - Core Info
     var title: String
     var description: String
     var time: String               // "08:00 AM"
     var date: String               // "2025-11-12"
     var status: UrgencyStatus
     var type: AgendaType
-    var ownerId: String            // Firestore user ID
-    var ownerName: String          // For UI display only
+
+    // MARK: - Caregiver (who CREATED the task)
+    var ownerId: String            // caregiver userId
+    var ownerName: String          // caregiver name (UI/debug)
+
+    // MARK: - Receiver (who the task is FOR) ✅ FIX
+    var receiverName: String       // receiver fullName (UI display)
+
+    // MARK: - Medicine (optional)
     var medicineId: Int?
     var medicineName: String?
     var medicineImage: String?
+
+    // MARK: - Completion
     var isCompleted: Bool = false
 
+    // MARK: - Initializer
     init(
         id: String,
         title: String,
@@ -37,6 +50,7 @@ struct AgendaItem: Identifiable, Hashable, Codable {
         type: AgendaType,
         ownerId: String,
         ownerName: String,
+        receiverName: String,          // ✅ REQUIRED
         medicineId: Int? = nil,
         medicineName: String? = nil,
         medicineImage: String? = nil,
@@ -51,10 +65,13 @@ struct AgendaItem: Identifiable, Hashable, Codable {
         self.type = type
         self.ownerId = ownerId
         self.ownerName = ownerName
+        self.receiverName = receiverName
         self.medicineId = medicineId
         self.medicineName = medicineName
         self.medicineImage = medicineImage
         self.isCompleted = isCompleted
     }
 }
+
+
 

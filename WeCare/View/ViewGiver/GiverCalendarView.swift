@@ -75,9 +75,11 @@ struct GiverCalendarView: View {
         }
     }
     private func filterButton(user: Users?, label: String) -> some View {
-        let isSelected = vm.selectedFilterPerson?.userId == user?.userId
+        let isSelected = vm.selectedPerson?.userId == user?.userId
+
         return Button {
-            vm.selectedFilterPerson = user
+            vm.selectedPerson = user
+            vm.selectedUser = user
         } label: {
             Text(label)
                 .font(.subheadline.bold())
@@ -90,6 +92,8 @@ struct GiverCalendarView: View {
                 .foregroundColor(.black)
         }
     }
+
+
     private var calendarCard: some View {
         VStack(spacing: 16) {
             HStack {
@@ -187,8 +191,8 @@ struct GiverCalendarView: View {
                                 : item.title
                             let shownOwner =
                                 vm.selectedPerson == nil
-                                    ? item.ownerName
-                                    : vm.selectedPerson!.fullName
+                                    ? item.receiverName   // ✅ show receiver in All mode
+                                    : item.receiverName
                             agendaItem(title: displayTitle,
                                        time: item.time,
                                        status: item.status,
