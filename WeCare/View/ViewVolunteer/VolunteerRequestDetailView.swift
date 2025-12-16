@@ -66,7 +66,7 @@ private extension VolunteerRequestDetailView {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            Text("Approx. distance: \(String(format: "%.1f", request.distanceKm)) km")
+            Text("Request Detail Information")
                 .font(.caption.weight(.semibold))
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 10)

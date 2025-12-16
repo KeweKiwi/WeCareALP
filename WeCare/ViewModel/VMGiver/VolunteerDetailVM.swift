@@ -14,8 +14,8 @@ final class VolunteerDetailVM: ObservableObject {
 
     // Lokasi care receiver bisa berasal dari user
     @Published var careReceiverLocation = CLLocationCoordinate2D(
-        latitude: -6.2000,
-        longitude: 106.8166
+        latitude: -7.2620,
+        longitude: 112.7390
     )
 
     init(volunteer: Volunteer) {

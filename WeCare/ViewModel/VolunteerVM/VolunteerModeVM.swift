@@ -16,8 +16,8 @@ enum VolunteerRegistrationStatus {
 }
 
 class VolunteerModeVM: ObservableObject {
-    let volunteerCoordinate = CLLocationCoordinate2D(latitude: -6.200000, longitude: 106.816666)
-    
+    let volunteerCoordinate = CLLocationCoordinate2D(latitude: -7.2620, longitude: 112.7390)
+
     // Registration
     @Published var isRegistered: Bool = false          // ⬅️ tetap dipakai
     @Published var profile: VolunteerProfile? = nil
@@ -37,8 +37,11 @@ class VolunteerModeVM: ObservableObject {
             distanceKm: 1.2,
             offeredReward: 25000,
             scheduledTime: "Today, 3:30 PM",
-            locationNote: "Melati Residence, Block C5",
-            careReceiverCoordinate: CLLocationCoordinate2D(latitude: -6.210, longitude: 106.820)
+            // ✅ Surabaya - masih dekat TP
+            locationNote: "Apartment / near Tunjungan Plaza Residence (Jl. Peneleh)",
+            // ✅ ~1.2 km dari volunteerCoordinate
+            careReceiverCoordinate: CLLocationCoordinate2D(latitude: -7.2512, longitude: 112.7390)
+
         ),
         VolunteerRequest(
             caregiverName: "Andi",
@@ -47,8 +50,10 @@ class VolunteerModeVM: ObservableObject {
             distanceKm: 2.8,
             offeredReward: 40000,
             scheduledTime: "Today, 5:00 PM",
-            locationNote: "House near Al-Hikmah Mosque",
-            careReceiverCoordinate: CLLocationCoordinate2D(latitude: -6.205, longitude: 106.810)
+            // ✅ Surabaya - area timur pusat kota (UNAIR B / RS Dr. Soetomo)
+            locationNote: "UNAIR Campus B Area / RSUD Dr. Soetomo (Gubeng - Airlangga)",
+            // ✅ ~2.8 km dari volunteerCoordinate
+            careReceiverCoordinate: CLLocationCoordinate2D(latitude: -7.2738, longitude: 112.7614)
         )
     ]
     
