@@ -19,7 +19,8 @@ final class VolunteerFinderVM: ObservableObject {
             gender: "Female",
             specialty: "Elderly Care, Medicine Reminder",
             restrictions: "No heavy lifting",
-            coordinate: CLLocationCoordinate2D(latitude: -6.2015, longitude: 106.8169)
+            // ✅ ~1.2 km dari careReceiverLocation (arah utara)
+            coordinate: CLLocationCoordinate2D(latitude: -7.2512, longitude: 112.7390)
         ),
         Volunteer(
             name: "Bob Smith",
@@ -29,7 +30,8 @@ final class VolunteerFinderVM: ObservableObject {
             gender: "Male",
             specialty: "Physical Therapy, Walking Support",
             restrictions: "Allergic to pets",
-            coordinate: CLLocationCoordinate2D(latitude: -6.2051, longitude: 106.8202)
+            // ✅ ~2.0 km dari careReceiverLocation (arah utara)
+            coordinate: CLLocationCoordinate2D(latitude: -7.2440, longitude: 112.7390)
         ),
         Volunteer(
             name: "Clara Lee",
@@ -39,7 +41,8 @@ final class VolunteerFinderVM: ObservableObject {
             gender: "Female",
             specialty: "Meal Prep, Companionship",
             restrictions: "None",
-            coordinate: CLLocationCoordinate2D(latitude: -6.1980, longitude: 106.8150)
+            // ✅ ~0.8 km dari careReceiverLocation (arah utara)
+            coordinate: CLLocationCoordinate2D(latitude: -7.2548, longitude: 112.7390)
         )
     ]
 

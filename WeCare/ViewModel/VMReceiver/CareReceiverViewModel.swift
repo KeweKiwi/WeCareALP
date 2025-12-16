@@ -88,6 +88,7 @@ class CareReceiverViewModel: ObservableObject {
         
         db.collection("Users")
             .whereField("user_id", in: userIds)
+            .whereField("role", isEqualTo: "careReceiver")
             .getDocuments { [weak self] snapshot, error in
                 guard let self = self else { return }
                 self.isLoading = false
