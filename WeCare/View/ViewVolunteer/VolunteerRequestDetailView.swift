@@ -14,6 +14,9 @@ struct VolunteerRequestDetailView: View {
     
     let showActionButtons: Bool
     
+    @State private var hasAppeared = false
+    @State private var pulseReward = false
+    
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
@@ -21,27 +24,42 @@ struct VolunteerRequestDetailView: View {
                 headerCard
                     .padding(.horizontal)
                     .padding(.top, 10)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(y: hasAppeared ? 0 : -20)
                 
                 mapCard
                     .padding(.horizontal)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .scaleEffect(hasAppeared ? 1 : 0.95)
                 
                 metaRow
                     .padding(.horizontal)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(x: hasAppeared ? 0 : -30)
                 
                 taskCard
                     .padding(.horizontal)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(y: hasAppeared ? 0 : 20)
                 
                 locationCard
                     .padding(.horizontal)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(y: hasAppeared ? 0 : 20)
                 
                 rewardCard
                     .padding(.horizontal)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .scaleEffect(pulseReward ? 1.02 : 1)
+                    .offset(y: hasAppeared ? 0 : 20)
                 
                 if showActionButtons {
                     actionButtons
                         .padding(.horizontal)
                         .padding(.top, 2)
                         .padding(.bottom, 14)
+                        .opacity(hasAppeared ? 1 : 0)
+                        .offset(y: hasAppeared ? 0 : 30)
                 } else {
                     Spacer(minLength: 14)
                 }
@@ -50,6 +68,18 @@ struct VolunteerRequestDetailView: View {
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Request Detail")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                hasAppeared = true
+            }
+            
+            // Subtle pulse animation for reward card
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                    pulseReward = true
+                }
+            }
+        }
     }
 }
 
@@ -205,6 +235,7 @@ private extension VolunteerRequestDetailView {
                     .cornerRadius(16)
                     .shadow(radius: 3, y: 2)
             }
+            .buttonStyle(BounceButtonStyle1())
             
             Button {
                 viewModel.decline(request)
@@ -222,6 +253,7 @@ private extension VolunteerRequestDetailView {
                             .stroke(Color(hex: "#fa6255"), lineWidth: 1)
                     )
             }
+            .buttonStyle(ScaleButtonStyle1())
         }
         .padding(14)
         .background(.background)
@@ -230,4 +262,20 @@ private extension VolunteerRequestDetailView {
     }
 }
 
+// MARK: - Button Styles
+struct BounceButtonStyle1: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.5), value: configuration.isPressed)
+    }
+}
+
+struct ScaleButtonStyle1: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
 

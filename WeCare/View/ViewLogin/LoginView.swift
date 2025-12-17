@@ -1,4 +1,5 @@
 import SwiftUI
+
 enum Brand {
     static let yellow = Color(hex: "#fdcb46")
     static let red    = Color(hex: "#fa6255")
@@ -8,28 +9,22 @@ enum Brand {
     static let ivory  = Color(hex: "#fff9e6")
 }
 
-
-// ===== Field Border Modifier (tipis & halus) =====
+// ===== Field Border Modifier (soft & minimal) =====
 private struct FieldBox: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(12)
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 16)
                     .fill(Color.white)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                    .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
             )
     }
 }
 
-
 private extension View {
     func fieldBox() -> some View { modifier(FieldBox()) }
 }
-
 
 // ===== LoginView =====
 struct LoginView: View {
@@ -44,132 +39,239 @@ struct LoginView: View {
     
     var body: some View {
         ZStack {
-            VStack(spacing: 30) {
-                Spacer(minLength: 0)
+            // Soft gradient background
+            LinearGradient(
+                colors: [
+                    Color(hex: "#fff5f8"),
+                    Color(hex: "#f0f4ff"),
+                    Color.white
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                Spacer()
+                    .frame(maxHeight: 20)
                 
-                Text("LOG IN")
-                    .font(.largeTitle.bold())
-                    .foregroundColor(Color(hex: "#2b3a67"))
-                
-                VStack(alignment: .leading, spacing: 16) {
-                    // Email
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Email")
-                            .font(.caption)
+                // Logo Section
+                VStack(spacing: 16) {
+                    Image(systemName: "heart.circle.fill")
+                        .font(.system(size: 80))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Brand.red, Brand.vlight],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: Brand.red.opacity(0.2), radius: 20, y: 10)
+                    
+                    VStack(spacing: 4) {
+                        HStack(spacing: 0) {
+                            Text("Welcome")
+                                .font(.system(size: 36, weight: .bold))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Brand.red, Brand.vlight.opacity(0.8)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                            Text(" back")
+                                .font(.system(size: 36, weight: .light))
+                                .foregroundColor(Color(hex: "#6b7280"))
+                        }
+                        
+                        Text("Sign in to continue")
+                            .font(.system(size: 16))
                             .foregroundColor(.secondary)
-                        TextField("", text: $email)
+                    }
+                }
+                .padding(.bottom, 50)
+                
+                // Form Section
+                VStack(alignment: .leading, spacing: 20) {
+                    // Email
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "envelope.fill")
+                                .font(.caption)
+                                .foregroundColor(Brand.red.opacity(0.7))
+                            Text("Email")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        TextField("", text: $email, prompt: Text("Enter your email").foregroundColor(.gray.opacity(0.5)))
                             .textInputAutocapitalization(.never)
                             .disableAutocorrection(true)
                             .keyboardType(.emailAddress)
+                            .font(.system(size: 16))
                             .fieldBox()
                     }
                     
                     // Password
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Password")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        HStack {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "lock.fill")
+                                .font(.caption)
+                                .foregroundColor(Brand.red.opacity(0.7))
+                            Text("Password")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        HStack(spacing: 12) {
                             if showPassword {
-                                TextField("••••••••", text: $password)
+                                TextField("", text: $password, prompt: Text("Enter your password").foregroundColor(.gray.opacity(0.5)))
                                     .textInputAutocapitalization(.never)
                                     .disableAutocorrection(true)
+                                    .font(.system(size: 16))
                             } else {
-                                SecureField("••••••••", text: $password)
+                                SecureField("", text: $password, prompt: Text("Enter your password").foregroundColor(.gray.opacity(0.5)))
                                     .textInputAutocapitalization(.never)
                                     .disableAutocorrection(true)
+                                    .font(.system(size: 16))
                             }
+                            
                             Button {
-                                withAnimation { showPassword.toggle() }
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showPassword.toggle()
+                                }
                             } label: {
                                 Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.gray)
+                                    .font(.system(size: 16))
                             }
                         }
                         .fieldBox()
                     }
                     
-                    // Error (local + dari AuthVM)
+                    // Error Messages
                     if let errorText {
-                        Text(errorText)
-                            .font(.caption)
-                            .foregroundColor(Brand.red)
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.caption)
+                            Text(errorText)
+                                .font(.system(size: 13))
+                        }
+                        .foregroundColor(Brand.red)
+                        .padding(.horizontal, 4)
                     } else if let vmError = authVM.errorMessage {
-                        Text(vmError)
-                            .font(.caption)
-                            .foregroundColor(Brand.red)
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.caption)
+                            Text(vmError)
+                                .font(.system(size: 13))
+                        }
+                        .foregroundColor(Brand.red)
+                        .padding(.horizontal, 4)
                     }
                     
                     // Sign In Button
                     Button(action: signIn) {
-                        HStack {
+                        HStack(spacing: 12) {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                            
                             if isLoading || authVM.isLoading {
-                                ProgressView().tint(.white)
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.9)
+                                Text("Signing in...")
+                                    .font(.system(size: 17, weight: .semibold))
+                            } else {
+                                Text("Log In")
+                                    .font(.system(size: 17, weight: .semibold))
                             }
-                            Text(isLoading || authVM.isLoading ? "Loading..." : "Sign In")
-                                .bold()
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Brand.red, in: RoundedRectangle(cornerRadius: 12))
+                        .padding(.vertical, 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Brand.red, Brand.red.opacity(0.85)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .shadow(color: Brand.red.opacity(0.3), radius: 15, y: 8)
+                        )
                         .foregroundColor(.white)
                     }
                     .buttonStyle(.plain)
                     .disabled(isLoading || authVM.isLoading || email.isEmpty || password.isEmpty)
-                    .opacity((isLoading || authVM.isLoading || email.isEmpty || password.isEmpty) ? 0.75 : 1)
+                    .opacity((isLoading || authVM.isLoading || email.isEmpty || password.isEmpty) ? 0.5 : 1)
+                    .padding(.top, 8)
                     
-                    // Link ke Sign Up
+                    // Sign Up Link
                     HStack {
                         Spacer()
-                        NavigationLink { RegisterView() } label: {
-                            Text("Don't have an account? Sign Up")
-                                .font(.footnote)
-                                .underline()
-                                .foregroundColor(.blue)
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.badge.plus")
+                                .font(.system(size: 12))
+                            Text("Don't have an account?")
+                                .font(.system(size: 14))
+                            NavigationLink { RegisterView() } label: {
+                                Text("Sign Up")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [Brand.sky, Brand.sky.opacity(0.7)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+                        .foregroundColor(.secondary)
+                        Spacer()
                     }
+                    .padding(.top, 8)
                 }
-                .padding(20)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.white)
-                        .shadow(color: .black.opacity(0.06), radius: 14, y: 6)
-                )
-                .padding(.horizontal, 30)
+                .padding(.horizontal, 32)
                 
-                Spacer(minLength: 0)
+                Spacer()
+                
+                // Bottom text
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.caption)
+                        .foregroundColor(Brand.green)
+                    Text("Easy access, anytime")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.bottom, 30)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .offset(y: -15)
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button { dismiss() } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.black)
-                        .padding(8)
-                        .background(Color.white.opacity(0.0), in: Circle())
-                }
-                .buttonStyle(.plain)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink { RegisterView() } label: {
-                    Text("Register")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(.blue, in: Capsule())
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Back")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                    .foregroundColor(Color(hex: "#2b3a67"))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(Color.white)
+                            .shadow(color: .black.opacity(0.06), radius: 8, y: 2)
+                    )
                 }
                 .buttonStyle(.plain)
             }
         }
         .toolbarBackground(.clear, for: .navigationBar)
-        .toolbarColorScheme(.light, for: .navigationBar)
-        .tint(.primary)
     }
     
     private func signIn() {
@@ -189,16 +291,13 @@ struct LoginView: View {
         authVM.signIn(email: email, password: password) { success in
             isLoading = false
             if !success, errorText == nil {
-                // kalau AuthVM punya errorMessage, itu sudah ditampilkan di view
                 if authVM.errorMessage == nil {
                     errorText = "Login failed, please try again."
                 }
             }
-            // kalau success, parent view (LoginPreviewFlow / App) yang handle navigation
         }
     }
 }
-
 
 // MARK: - Preview Flow (Login -> Main Tab) khusus untuk Canvas
 struct LoginPreviewFlow: View {
@@ -208,12 +307,10 @@ struct LoginPreviewFlow: View {
     var body: some View {
         Group {
             if authVM.isLoggedIn {
-                // ✅ Setelah login sukses → masuk ke TabView (Persons + Calendar)
                 GiverMainTabView()
                     .environmentObject(coordinator)
                     .environmentObject(authVM)
             } else {
-                // 🔐 Sebelum login → tampilkan LoginView
                 NavigationStack {
                     LoginView()
                 }
@@ -223,12 +320,6 @@ struct LoginPreviewFlow: View {
     }
 }
 
-
 #Preview {
     LoginPreviewFlow()
 }
-
-
-
-
-

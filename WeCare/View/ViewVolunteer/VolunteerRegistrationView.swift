@@ -16,6 +16,7 @@ struct VolunteerRegistrationView: View {
     @State private var restrictions: String = ""
     
     @State private var showValidationError: Bool = false
+    @State private var hasAppeared = false
     
     // NEW: dummy state untuk upload KTP & selfie (prototype only)
     @State private var isKTPUploaded: Bool = false
@@ -41,35 +42,34 @@ struct VolunteerRegistrationView: View {
                     
                     // Header
                     HStack(alignment: .top, spacing: 12) {
-
                         // Strip kuning sejajar subtitle
                         VStack {
-                            Spacer().frame(height: 4)   // geser sedikit agar sejajar teks bawah
+                            Spacer().frame(height: 4)
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(yellow)
-                                .frame(width: 8, height: 40) // cukup untuk tinggi subtitle saja
+                                .frame(width: 8, height: 40)
+                                .scaleEffect(hasAppeared ? 1 : 0.3, anchor: .top)
                             Spacer()
                         }
-
                         VStack(alignment: .leading, spacing: 4) {
-
                             Text("Become a Volunteer")
                                 .font(.largeTitle.bold())
                                 .foregroundColor(.black)
-
                             Text("As a volunteer, you can help other caregivers by running errands, buying medicine, or visiting care receivers nearby.")
                                 .font(.subheadline)
                                 .foregroundColor(.black.opacity(0.7))
                         }
+                        .opacity(hasAppeared ? 1 : 0)
+                        .offset(x: hasAppeared ? 0 : -20)
                     }
                     .padding(.top)
-
                     
                     // Info card
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 8) {
                             Image(systemName: "info.circle.fill")
                                 .foregroundColor(skyBlue)
+                                .rotationEffect(.degrees(hasAppeared ? 0 : -180))
                             Text("Why we need your details")
                                 .font(.headline)
                                 .foregroundColor(.black)
@@ -89,6 +89,8 @@ struct VolunteerRegistrationView: View {
                             .stroke(skyBlue.opacity(0.5), lineWidth: 1)
                     )
                     .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(y: hasAppeared ? 0 : 20)
                     
                     // FORM WRAPPER
                     VStack(alignment: .leading, spacing: 18) {
@@ -103,7 +105,8 @@ struct VolunteerRegistrationView: View {
                                 .cornerRadius(10)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(softBlue, lineWidth: 1)
+                                        .stroke(name.isEmpty ? softBlue : skyBlue, lineWidth: name.isEmpty ? 1 : 2)
+                                        .animation(.easeInOut(duration: 0.2), value: name.isEmpty)
                                 )
                         }
                         
@@ -119,7 +122,8 @@ struct VolunteerRegistrationView: View {
                                 .cornerRadius(10)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(softBlue, lineWidth: 1)
+                                        .stroke(ageText.isEmpty ? softBlue : skyBlue, lineWidth: ageText.isEmpty ? 1 : 2)
+                                        .animation(.easeInOut(duration: 0.2), value: ageText.isEmpty)
                                 )
                         }
                         
@@ -136,7 +140,7 @@ struct VolunteerRegistrationView: View {
                             .pickerStyle(SegmentedPickerStyle())
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.white.opacity(0.001)) // biar gak ganggu, cuma supaya kelihatan rapi
+                                    .fill(Color.white.opacity(0.001))
                             )
                         }
                         
@@ -155,7 +159,8 @@ struct VolunteerRegistrationView: View {
                             .cornerRadius(10)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .stroke(softBlue, lineWidth: 1)
+                                    .stroke(specialty.isEmpty ? softBlue : skyBlue, lineWidth: specialty.isEmpty ? 1 : 2)
+                                    .animation(.easeInOut(duration: 0.2), value: specialty.isEmpty)
                             )
                             .lineLimit(2, reservesSpace: true)
                         }
@@ -175,14 +180,13 @@ struct VolunteerRegistrationView: View {
                             .cornerRadius(10)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .stroke(softBlue, lineWidth: 1)
+                                    .stroke(restrictions.isEmpty ? softBlue : softBlue.opacity(0.6), lineWidth: 1)
                             )
                             .lineLimit(3, reservesSpace: true)
                         }
                     }
                     .padding(16)
                     .background(
-                        // ⬇️ Biar beda jelas dari background, pakai abu-abu muda + border biru lembut
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color(.systemGray6))
                     )
@@ -191,12 +195,15 @@ struct VolunteerRegistrationView: View {
                             .stroke(softBlue.opacity(0.5), lineWidth: 1)
                     )
                     .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(y: hasAppeared ? 0 : 30)
                     
                     // NEW: Identity verification (prototype KTP & selfie)
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 8) {
                             Image(systemName: "shield.checkerboard")
                                 .foregroundColor(green)
+                                .rotationEffect(.degrees(hasAppeared ? 0 : 360))
                             Text("Identity Verification (Prototype)")
                                 .font(.headline)
                                 .foregroundColor(.black)
@@ -208,11 +215,14 @@ struct VolunteerRegistrationView: View {
                         
                         // Upload KTP
                         Button(action: {
-                            isKTPUploaded.toggle()
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                                isKTPUploaded.toggle()
+                            }
                         }) {
                             HStack {
                                 Image(systemName: isKTPUploaded ? "checkmark.circle.fill" : "doc.text.viewfinder")
                                     .foregroundColor(isKTPUploaded ? green : skyBlue)
+                                    .scaleEffect(isKTPUploaded ? 1.1 : 1)
                                 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(isKTPUploaded ? "ID Card (KTP) uploaded (prototype)" : "Upload ID Card (KTP)")
@@ -231,17 +241,21 @@ struct VolunteerRegistrationView: View {
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .stroke(skyBlue.opacity(0.5), lineWidth: 1)
+                                    .stroke(isKTPUploaded ? green.opacity(0.5) : skyBlue.opacity(0.5), lineWidth: 1)
                             )
                         }
+                        .buttonStyle(ScaleButtonStyle())
                         
                         // Upload selfie
                         Button(action: {
-                            isSelfieUploaded.toggle()
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                                isSelfieUploaded.toggle()
+                            }
                         }) {
                             HStack {
                                 Image(systemName: isSelfieUploaded ? "checkmark.circle.fill" : "person.crop.square")
                                     .foregroundColor(isSelfieUploaded ? green : skyBlue)
+                                    .scaleEffect(isSelfieUploaded ? 1.1 : 1)
                                 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(isSelfieUploaded ? "Selfie photo uploaded (prototype)" : "Upload selfie photo")
@@ -260,9 +274,10 @@ struct VolunteerRegistrationView: View {
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .stroke(skyBlue.opacity(0.5), lineWidth: 1)
+                                    .stroke(isSelfieUploaded ? green.opacity(0.5) : skyBlue.opacity(0.5), lineWidth: 1)
                             )
                         }
+                        .buttonStyle(ScaleButtonStyle())
                         
                         Text("You can skip these steps for now. They are optional in this prototype and do not block registration.")
                             .font(.caption2)
@@ -270,7 +285,6 @@ struct VolunteerRegistrationView: View {
                     }
                     .padding(16)
                     .background(
-                        // ⬇️ Sama: card dibuat beda dengan background
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color(.systemGray6))
                     )
@@ -279,6 +293,8 @@ struct VolunteerRegistrationView: View {
                             .stroke(skyBlue.opacity(0.4), lineWidth: 1)
                     )
                     .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(y: hasAppeared ? 0 : 40)
                     
                     if showValidationError {
                         HStack(spacing: 6) {
@@ -288,6 +304,7 @@ struct VolunteerRegistrationView: View {
                                 .font(.caption)
                                 .foregroundColor(red)
                         }
+                        .transition(.scale.combined(with: .opacity))
                     }
                     
                     Spacer(minLength: 10)
@@ -298,22 +315,31 @@ struct VolunteerRegistrationView: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(green) // sesuai tema: hijau #a6d17d
+                            .background(green)
                             .foregroundColor(.black)
                             .cornerRadius(16)
                             .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 3)
                     }
+                    .buttonStyle(VolunteerBounceButtonStyle())
                     .padding(.top, 4)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(y: hasAppeared ? 0 : 20)
                     
                     Text("You can change your availability later from the Volunteer Mode home screen.")
                         .font(.caption)
                         .foregroundColor(.black.opacity(0.7))
                         .padding(.bottom, 20)
+                        .opacity(hasAppeared ? 1 : 0)
                 }
                 .padding()
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.75)) {
+                hasAppeared = true
+            }
+        }
     }
     
     private func registerTapped() {
@@ -326,7 +352,9 @@ struct VolunteerRegistrationView: View {
             ageInt > 0,
             !trimmedSpecialty.isEmpty
         else {
-            showValidationError = true
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                showValidationError = true
+            }
             return
         }
         
@@ -340,4 +368,12 @@ struct VolunteerRegistrationView: View {
     }
 }
 
+// MARK: - Bounce Button Style
+struct VolunteerBounceButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.5), value: configuration.isPressed)
+    }
+}
 

@@ -4,12 +4,14 @@
 //
 //  Created by student on 19/11/25.
 //
-
 import SwiftUI
 import MapKit
 
 struct VolunteerDetailView: View {
     @StateObject var viewModel: VolunteerDetailVM
+    
+    @State private var hasAppeared = false
+    @State private var starPulse = false
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -19,10 +21,14 @@ struct VolunteerDetailView: View {
                 headerCard
                     .padding(.horizontal)
                     .padding(.top, 8)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(y: hasAppeared ? 0 : -30)
                 
                 // MAP CARD
                 mapCard
                     .padding(.horizontal)
+                    .opacity(hasAppeared ? 1 : 0)
+                    .scaleEffect(hasAppeared ? 1 : 0.92)
                 
                 // DETAILS CARDS
                 VStack(spacing: 12) {
@@ -31,12 +37,16 @@ struct VolunteerDetailView: View {
                         icon: "sparkles",
                         text: viewModel.volunteer.specialty
                     )
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(x: hasAppeared ? 0 : -30)
                     
                     infoCard(
                         title: "Restrictions / Notes",
                         icon: "exclamationmark.triangle.fill",
                         text: viewModel.volunteer.restrictions
                     )
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(x: hasAppeared ? 0 : 30)
                 }
                 .padding(.horizontal)
                 
@@ -51,13 +61,28 @@ struct VolunteerDetailView: View {
                         .cornerRadius(16)
                         .shadow(radius: 3, y: 2)
                 }
+                .buttonStyle(PressScaleButtonStyle())
                 .padding(.horizontal)
                 .padding(.bottom, 18)
+                .opacity(hasAppeared ? 1 : 0)
+                .offset(y: hasAppeared ? 0 : 20)
             }
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Volunteer Detail")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.75)) {
+                hasAppeared = true
+            }
+            
+            // Star pulse animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                    starPulse = true
+                }
+            }
+        }
     }
 }
 
@@ -66,10 +91,21 @@ private extension VolunteerDetailView {
     
     var headerCard: some View {
         HStack(spacing: 14) {
-            Image(systemName: "person.circle.fill")
-                .resizable()
-                .frame(width: 74, height: 74)
-                .foregroundColor(Color(hex: "#fdcb46"))
+            // Animated avatar with subtle pulse
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "#fdcb46").opacity(0.15))
+                    .frame(width: 84, height: 84)
+                    .scaleEffect(hasAppeared ? 1 : 0.8)
+                    .opacity(hasAppeared ? 0.4 : 0)
+                
+                Image(systemName: "person.circle.fill")
+                    .resizable()
+                    .frame(width: 74, height: 74)
+                    .foregroundColor(Color(hex: "#fdcb46"))
+                    .scaleEffect(hasAppeared ? 1 : 0.7)
+                    .rotationEffect(.degrees(hasAppeared ? 0 : -180))
+            }
             
             VStack(alignment: .leading, spacing: 6) {
                 Text(viewModel.volunteer.name)
@@ -87,6 +123,7 @@ private extension VolunteerDetailView {
                     HStack(spacing: 4) {
                         Image(systemName: "star.fill")
                             .foregroundColor(.yellow)
+                            .scaleEffect(starPulse ? 1.15 : 1)
                         Text(String(format: "%.1f", viewModel.volunteer.rating))
                             .font(.subheadline.weight(.semibold))
                     }
@@ -153,4 +190,12 @@ private extension VolunteerDetailView {
     }
 }
 
+// MARK: - Button Style
+struct PressScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
 

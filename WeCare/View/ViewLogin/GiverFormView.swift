@@ -32,11 +32,13 @@ struct GiverFormView: View {
         ZStack {
             Form {
             // === Care Taker ===
-            Section(header: Text("Care Taker")) {
+            Section(header: Text("Care Taker"))
+                {
                 TextField("Email", text: $email)
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
+
                 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Password").font(.caption).foregroundStyle(.secondary)
@@ -58,7 +60,7 @@ struct GiverFormView: View {
                             }
                         } label: {
                             Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(red: 0.4, green: 0.6, blue: 0.8))
                                 .rotationEffect(.degrees(showPassword ? 180 : 0))
                         }
                     }
@@ -70,6 +72,7 @@ struct GiverFormView: View {
                     .keyboardType(.phonePad)
                 
                 DatePicker("Date of birth", selection: $dob, displayedComponents: .date)
+                    .accentColor(Color(red: 0.4, green: 0.6, blue: 0.8))
                 
                 Picker("Gender", selection: $gender) {
                     ForEach(genders, id: \.self) { Text($0) }
@@ -82,6 +85,7 @@ struct GiverFormView: View {
             // === Care Receiver toggle / Family Code ===
             Section(header: Text("Care Receiver")) {
                 Toggle("Already have care receiver?", isOn: $hasExistingReceiver)
+                    .tint(Color(red: 0.4, green: 0.6, blue: 0.8))
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: hasExistingReceiver)
                 
                 if hasExistingReceiver {
@@ -143,7 +147,8 @@ struct GiverFormView: View {
                         Picker("Gender", selection: $rcGenders[i]) {
                             ForEach(genders, id: \.self) { Text($0) }
                         }
-                        
+                        .accentColor(Color(red: 0.4, green: 0.6, blue: 0.8))
+
                         if rcNames.count > 1 {
                             Button(role: .destructive) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
@@ -169,6 +174,7 @@ struct GiverFormView: View {
                 } label: {
                     Label("Add member", systemImage: "plus.circle.fill")
                         .font(.body.weight(.semibold))
+                        .foregroundColor(Color(red: 0.4, green: 0.6, blue: 0.8))
                 }
                 .scaleEffect(rcNames.isEmpty ? 1.0 : 1.0)
                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: rcNames.count)
