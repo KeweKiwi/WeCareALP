@@ -10,6 +10,8 @@ struct VolunteerConfirmationView: View {
     @EnvironmentObject var coordinator: NavigationCoordinator      // ⬅️ ambil dari Environment
     @StateObject var viewModel: VolunteerConfirmationVM
     @State private var showCompletionSheet: Bool = false
+    @State private var dotPhase: Int = 0
+
     
     var body: some View {
         VStack {
@@ -35,6 +37,7 @@ struct VolunteerConfirmationView: View {
         // ⛔️ TIDAK pakai NavigationLink hidden lagi
     }
     
+
     // MARK: - Waiting View
     private var waitingView: some View {
         VStack(spacing: 20) {
@@ -42,17 +45,29 @@ struct VolunteerConfirmationView: View {
                 .font(.largeTitle.bold())
                 .foregroundColor(Color(hex: "#387b38"))
                 .padding(.top)
-            
-            Text("Waiting for \(viewModel.volunteer.name) to accept...")
+
+            HStack(spacing: 0) {
+                Text("Waiting for \(viewModel.volunteer.name) to accept")
+                    .font(.headline)
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+
+                // dots fixed-width -> layout tidak berubah sama sekali
+                HStack(spacing: 0) {
+                    Text(".").opacity(dotPhase >= 1 ? 1 : 0.25)
+                    Text(".").opacity(dotPhase >= 2 ? 1 : 0.25)
+                    Text(".").opacity(dotPhase >= 3 ? 1 : 0.25)
+                }
                 .font(.headline)
                 .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            
+                .frame(width: 18, alignment: .leading) // FIXED SPACE untuk 3 dots
+            }
+            .padding(.horizontal)
+
             Spacer()
-            
+
             Button(action: {
-                withAnimation(.spring()) {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                     viewModel.simulateAcceptance()
                 }
             }) {
@@ -66,11 +81,19 @@ struct VolunteerConfirmationView: View {
                     .shadow(radius: 3)
             }
             .padding(.horizontal)
-            
+
             Spacer()
         }
+        .onAppear {
+            // animasi dots TANPA geser layout
+            Timer.scheduledTimer(withTimeInterval: 0.45, repeats: true) { _ in
+                dotPhase = (dotPhase % 3) + 1
+            }
+        }
     }
-    
+
+
+
     // MARK: - Approved View
     private var approvedView: some View {
         VStack(spacing: 8) {
