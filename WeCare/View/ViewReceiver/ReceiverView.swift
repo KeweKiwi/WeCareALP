@@ -1,5 +1,6 @@
 import SwiftUI
 struct ReceiverView: View {
+    let receiverId: Int
     // ViewModel is the single source of truth for all Views
     @StateObject private var viewModel = ReceiverVM()
     
@@ -7,7 +8,7 @@ struct ReceiverView: View {
         NavigationStack {
                     TabView {
                         
-                        ReceiverDashboardView(viewModel: viewModel)
+                        ReceiverDashboardView(viewModel: viewModel, receiverId: receiverId)
                             .tabItem {
                                 Label("Home", systemImage: "house.fill")
                             }
@@ -27,9 +28,9 @@ struct ReceiverView: View {
         }
     }
 }
-// MARK: - Preview (for Xcode)
-#Preview {
-    ReceiverView()
-}
+//// MARK: - Preview (for Xcode)
+//#Preview {
+//    ReceiverView()
+//}
 
 
