@@ -17,10 +17,12 @@ final class GiverCalendarVM: ObservableObject {
     @Published var currentMonthOffset: Int = 0
     @Published var selectedPerson: Users? = nil {
         didSet {
-            guard !persons.isEmpty else { return }
-
-            if let _ = selectedPerson {
-                Task { await fetchTasksForSelectedReceiver() }
+            detachTasksListener()
+            if selectedPerson != nil {
+                Task {
+                    await fetchTasksForSelectedReceiver()
+                    await setupTasksListener()
+                }
             } else {
                 Task { await fetchTasksForAllReceivers() }
             }
@@ -57,7 +59,8 @@ final class GiverCalendarVM: ObservableObject {
     // persons holds only careReceivers (so the view/pickers won't show the caregiver)
     @Published var persons: [Users] = []
     // agendaData organized by receiver's fullName
-    @Published var agendaData: [String: [String: [AgendaItem]]] = [:]
+    @Published var agendaData: [Int: [String: [AgendaItem]]] = [:]
+    //            receiverId
     
     private let db = Firestore.firestore()
     private let tasksCollection = "Tasks" // root collection as per your screenshot
@@ -129,26 +132,35 @@ final class GiverCalendarVM: ObservableObject {
     }
     var currentAgenda: [AgendaItem] {
         let key = dateKey(from: selectedDate)
+
+
         if let person = selectedPerson {
-            return (agendaData[person.fullName]?[key] ?? [])
+            return (agendaData[person.userId]?[key] ?? [])
                 .sorted { $0.time < $1.time }
         }
-        return persons
-            .flatMap { agendaData[$0.fullName]?[key] ?? [] }
-            .sorted { $0.time < $1.time }
 
+
+        return persons
+            .flatMap { agendaData[$0.userId]?[key] ?? [] }
+            .sorted { $0.time < $1.time }
     }
+
     func deleteAgenda(_ agenda: AgendaItem) {
         let key = dateKey(from: selectedDate)
         
         if let person = selectedPerson {
-            _ = removeAgenda(ownerName: person.fullName, dateKey: key, agenda: agenda)
+            _ = removeAgenda(
+                receiverId: agenda.receiverId,
+                dateKey: key,
+                agenda: agenda
+            )
+
         } else {
-            for p in persons {
-                if removeAgenda(ownerName: p.fullName, dateKey: key, agenda: agenda) {
-                    break
-                }
-            }
+            _ = removeAgenda(
+                receiverId: agenda.receiverId,
+                dateKey: key,
+                agenda: agenda
+            )
         }
         
         // Always use agenda.id as Firestore docID
@@ -166,20 +178,31 @@ final class GiverCalendarVM: ObservableObject {
             }
         }
     }
+
     @discardableResult
-    private func removeAgenda(ownerName: String, dateKey: String, agenda: AgendaItem) -> Bool {
-        var ownerMap = agendaData[ownerName] ?? [:]
-        var dayList = ownerMap[dateKey] ?? []
+    private func removeAgenda(
+        receiverId: Int,
+        dateKey: String,
+        agenda: AgendaItem
+    ) -> Bool {
+
+
+        var receiverMap = agendaData[receiverId] ?? [:]
+        var dayList = receiverMap[dateKey] ?? []
+
+
         let before = dayList.count
         dayList.removeAll { $0.id == agenda.id }
+
+
         if before != dayList.count {
-            ownerMap[dateKey] = dayList.isEmpty ? nil : dayList
-            agendaData[ownerName] = ownerMap
-            print("Removed agenda locally for receiver='\(ownerName)' date='\(dateKey)'")
+            receiverMap[dateKey] = dayList.isEmpty ? nil : dayList
+            agendaData[receiverId] = receiverMap
             return true
         }
         return false
     }
+
     func loadMedicines() async {
         do {
             let snapshot = try await db.collection("Medicines").getDocuments()
@@ -274,7 +297,8 @@ final class GiverCalendarVM: ObservableObject {
                     type: (medicineId == nil ? .activity : .medicine),
                     ownerId: caregiver?.id ?? "",
                     ownerName: caregiver?.fullName ?? "Unknown",
-                    receiverName: receiver.fullName,   // ✅ ADD THIS
+                    receiverId: receiver.userId,
+                    receiverName: receiver.fullName,
                     medicineId: medicineId,
                     medicineName: medName,
                     medicineImage: medImage,
@@ -288,7 +312,7 @@ final class GiverCalendarVM: ObservableObject {
             }
 
             DispatchQueue.main.async {
-                self.agendaData[receiver.fullName] = newAgendaForReceiver
+                self.agendaData[receiver.userId] = newAgendaForReceiver
                 print("🔔 tasksListener updated agendaData[\(receiver.fullName)] (keys: \(newAgendaForReceiver.keys.count))")
             }
         }
@@ -296,11 +320,13 @@ final class GiverCalendarVM: ObservableObject {
 
     // MARK: - FIRESTORE: Fetch tasks for selected receiver
     func fetchTasksForSelectedReceiver() async {
-        
-        guard let receiver = editAgendaOwner else {
-            print("saveEditedAgenda -> no editAgendaOwner")
+
+
+        guard let receiver = selectedPerson else {
+            print("⚠️ fetchTasks aborted: no selectedPerson")
             return
         }
+
 
         print("fetchTasks: loading tasks for receiver='\(receiver.fullName)' (userId=\(receiver.userId))")
         do {
@@ -353,7 +379,8 @@ final class GiverCalendarVM: ObservableObject {
                     type: (medicineId == nil ? .activity : .medicine),
                     ownerId: caregiver?.id ?? "",
                     ownerName: caregiver?.fullName ?? "Unknown",
-                    receiverName: receiver.fullName,   // ✅ from selectedPerson
+                    receiverId: receiver.userId,
+                    receiverName: receiver.fullName,
                     medicineId: medicineId,
                     medicineName: medName,
                     medicineImage: medImage,
@@ -368,7 +395,7 @@ final class GiverCalendarVM: ObservableObject {
             }
             // Update local cache
             DispatchQueue.main.async {
-                self.agendaData[receiver.fullName] = newAgendaForReceiver
+                self.agendaData[receiver.userId] = newAgendaForReceiver
                 print("✅ fetchTasks: agendaData[\(receiver.fullName)] updated (keys: \(newAgendaForReceiver.keys.count))")
             }
         } catch {
@@ -423,7 +450,8 @@ final class GiverCalendarVM: ObservableObject {
             type: newAgendaType,
             ownerId: caregiver.id,
             ownerName: caregiver.fullName,
-            receiverName: receiver.fullName,   // ✅ IMPORTANT
+            receiverId: receiver.userId,
+            receiverName: receiver.fullName,
             medicineId: selectedMedicine?.medicineId,
             medicineName: selectedMedicine?.medicineName,
             medicineImage: selectedMedicine?.medicineImage,
@@ -431,11 +459,11 @@ final class GiverCalendarVM: ObservableObject {
         )
 
         // Store locally under receiver
-        var receiverMap = agendaData[receiver.fullName] ?? [:]
+        var receiverMap = agendaData[receiver.userId] ?? [:]
         var dayList = receiverMap[dateKey] ?? []
         dayList.append(localItem)
         receiverMap[dateKey] = dayList
-        agendaData[receiver.fullName] = receiverMap
+        agendaData[receiver.userId] = receiverMap
         print("Local cache updated for receiver '\(receiver.fullName)' date '\(dateKey)' — dayListCount: \(dayList.count)")
         // Write to Firestore
         Task {
@@ -509,44 +537,53 @@ final class GiverCalendarVM: ObservableObject {
     // MARK: - EDIT flow (local + Firestore best-effort)
     func startEditing(_ agenda: AgendaItem) {
         editAgendaOriginal = agenda
-        if agenda.medicineId != nil {
-            editAgendaTitle = agenda.medicineName ?? ""
-            isTitleEditable = false
-        } else {
-            if agenda.title.starts(with: "💊 ") {
-                editAgendaTitle = String(agenda.title.dropFirst(2))
-            } else {
-                editAgendaTitle = agenda.title
-            }
-            isTitleEditable = true
-        }
+
+
+        editAgendaTitle = agenda.medicineId != nil
+            ? (agenda.medicineName ?? "")
+            : agenda.title.replacingOccurrences(of: "💊 ", with: "")
+
+
+        isTitleEditable = agenda.medicineId == nil
         editAgendaDescription = agenda.description
-        let df = DateFormatter(); df.dateFormat = "hh:mm a"
+
+
+        let df = DateFormatter()
+        df.dateFormat = "hh:mm a"
         editAgendaTimeDate = df.date(from: agenda.time) ?? Date()
+
+
         editAgendaStatus = agenda.status
-        // default owner for edit — we keep to forced caregiver when saving
-        editAgendaOwner = currentCaregiver
         editAgendaType = agenda.medicineId != nil ? .medicine : .activity
-        // restore medicine selection if needed
-        if editAgendaType == .medicine {
-            selectedMedicine = Medicines(
-                id: agenda.id,
-                data: [
-                    "medicine_id": agenda.medicineId ?? 0,
-                    "medicine_name": agenda.medicineName ?? "",
-                    "medicine_image": agenda.medicineImage ?? ""
-                ]
-            )
-        } else {
-            selectedMedicine = nil
-        }
+
+
+        // ✅ FIX: set receiver correctly
+        editAgendaOwner = users.first { $0.userId == agenda.receiverId }
+
+
+        selectedMedicine = agenda.medicineId == nil ? nil : Medicines(
+            id: agenda.id,
+            data: [
+                "medicine_id": agenda.medicineId ?? 0,
+                "medicine_name": agenda.medicineName ?? "",
+                "medicine_image": agenda.medicineImage ?? ""
+            ]
+        )
+
+
         showingEditAgenda = true
     }
+
     func saveEditedAgenda() {
         guard let original = editAgendaOriginal else { return }
         guard let caregiver = currentCaregiver else { return }
         guard let receiver = editAgendaOwner else { return }
 
+
+        if selectedPerson == nil {
+            // force listener to receiver being edited
+            selectedPerson = receiver
+        }
 
         let key = dateKey(from: selectedDate)
         let f = DateFormatter(); f.dateFormat = "hh:mm a"
@@ -564,6 +601,7 @@ final class GiverCalendarVM: ObservableObject {
             type: editAgendaType,
             ownerId: caregiver.id,
             ownerName: caregiver.fullName,
+            receiverId: receiver.userId,
             receiverName: receiver.fullName,
             medicineId: editAgendaType == .medicine ? selectedMedicine?.medicineId : nil,
             medicineName: editAgendaType == .medicine ? selectedMedicine?.medicineName : nil,
@@ -572,12 +610,29 @@ final class GiverCalendarVM: ObservableObject {
 
 
         // 🔥 MOVE agenda between receivers
-        removeAgenda(ownerName: original.receiverName, dateKey: key, agenda: original)
+        // remove from OLD receiver
+        removeAgenda(
+            receiverId: original.receiverId,
+            dateKey: original.date,
+            agenda: original
+        )
 
 
-        var receiverMap = agendaData[receiver.fullName] ?? [:]
+
+        // add to NEW receiver
+        // remove from old receiver
+        removeAgenda(
+            receiverId: original.receiverId,
+            dateKey: original.date,
+            agenda: original
+        )
+
+
+        // add to new receiver
+        var receiverMap = agendaData[receiver.userId] ?? [:]
         receiverMap[key, default: []].append(updated)
-        agendaData[receiver.fullName] = receiverMap
+        agendaData[receiver.userId] = receiverMap
+
 
 
         Task {
@@ -589,7 +644,6 @@ final class GiverCalendarVM: ObservableObject {
                 "due_time": Timestamp(date: combine(date: selectedDate, time: editAgendaTimeDate)),
                 "careReceiver_id": receiver.userId
             ])
-            await fetchTasksForSelectedReceiver()
         }
 
 
@@ -602,7 +656,7 @@ final class GiverCalendarVM: ObservableObject {
         let key = dateKey(forDay: day, in: dateByAddingMonths(currentMonthOffset))
         var statuses: [UrgencyStatus] = []
         func appendStatus(_ p: Users) {
-            if let list = agendaData[p.fullName]?[key] {
+            if let list = agendaData[p.userId]?[key] {
                 statuses.append(contentsOf: list.map { $0.status })
             }
         }
@@ -649,7 +703,7 @@ final class GiverCalendarVM: ObservableObject {
         detachTasksListener()
         print("📥 fetchTasksForAllReceivers")
 
-        var combinedAgenda: [String: [String: [AgendaItem]]] = [:]
+        var combinedAgenda: [Int: [String: [AgendaItem]]] = [:]
 
         for receiver in persons {
             do {
@@ -690,6 +744,7 @@ final class GiverCalendarVM: ObservableObject {
                         type: medicineId == nil ? .activity : .medicine,
                         ownerId: caregiver?.id ?? "",
                         ownerName: caregiver?.fullName ?? "Unknown",
+                        receiverId: receiver.userId,
                         receiverName: receiver.fullName,
                         medicineId: medicineId,
                         medicineName: med?.medicineName,
@@ -697,8 +752,9 @@ final class GiverCalendarVM: ObservableObject {
                         isCompleted: isCompleted
                     )
 
-                    combinedAgenda[receiver.fullName, default: [:]][dateKey, default: []]
+                    combinedAgenda[receiver.userId, default: [:]][dateKey, default: []]
                         .append(agenda)
+
                 }
             } catch {
                 print("❌ fetchTasksForAllReceivers error:", error)
