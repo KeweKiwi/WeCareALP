@@ -76,25 +76,26 @@ This application is designed to support elderly individuals living independently
                     Color.black.opacity(0.4)
                         .ignoresSafeArea()
                         .onTapGesture { showLogoutPopup = false }
-                    
+
                     VStack(spacing: 20) {
                         Image(systemName: "door.right.hand.open")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 70, height: 70)
                             .foregroundColor(Color(hex: "#f4b4b4"))
-                        
-                        Text("Oh no! You're leaving…")
+
+                        Text("Sign Out Confirmation")
                             .font(.title2.bold())
-                        
-                        Text("Are you sure?")
+
+                        Text("Are you sure you want to sign out from your account?")
                             .font(.body)
                             .foregroundColor(.gray)
-                        
+                            .multilineTextAlignment(.center)
+
                         Button(action: {
                             showLogoutPopup = false
                         }) {
-                            Text("Naah, Just Kidding")
+                            Text("Cancel")
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .padding()
@@ -102,12 +103,12 @@ This application is designed to support elderly individuals living independently
                                 .background(Color(hex: "#91bef8"))
                                 .cornerRadius(12)
                         }
-                        
+
                         Button(action: {
                             showLogoutPopup = false
                             goToStart = true
                         }) {
-                            Text("Yes, Log Me Out")
+                            Text("Sign Out")
                                 .font(.headline)
                                 .padding()
                                 .frame(maxWidth: .infinity)
