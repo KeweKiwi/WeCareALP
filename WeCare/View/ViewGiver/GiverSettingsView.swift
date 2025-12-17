@@ -2,14 +2,15 @@ import SwiftUI
 
 struct GiverSettingsView: View {
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var authVM: AuthViewModel      // dipakai untuk logout → StartView
+    @EnvironmentObject var authVM: AuthViewModel
     
     @StateObject private var viewModel: GiverSettingsVM
     
     @State private var showingImagePicker = false
     @State private var showingLogoutAlert = false
     @State private var isEditMode = false
-    @State private var isPasswordVisible = false      // toggle mata
+    @State private var isPasswordVisible = false
+    @State private var showContent = false
     
     let genderOptions = ["Male", "Female"]
     
@@ -38,6 +39,7 @@ struct GiverSettingsView: View {
                                     .font(.system(size: 14))
                                     .foregroundColor(.red)
                                     .padding(.horizontal, 20)
+                                    .transition(.scale.combined(with: .opacity))
                             }
                             
                             VStack(spacing: 12) {
@@ -46,14 +48,26 @@ struct GiverSettingsView: View {
                                     text: $viewModel.name,
                                     icon: "person.fill"
                                 )
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.05)),
+                                    removal: .opacity
+                                ))
                                 
                                 settingsField(
                                     title: "Email",
                                     text: $viewModel.email,
                                     icon: "envelope.fill"
                                 )
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.1)),
+                                    removal: .opacity
+                                ))
                                 
                                 genderPicker
+                                    .transition(.asymmetric(
+                                        insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.15)),
+                                        removal: .opacity
+                                    ))
                                 
                                 settingsField(
                                     title: "Password",
@@ -61,13 +75,21 @@ struct GiverSettingsView: View {
                                     icon: "lock.fill",
                                     isSecure: true
                                 )
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.2)),
+                                    removal: .opacity
+                                ))
                                 
                                 settingsField(
                                     title: "Phone",
                                     text: $viewModel.phone,
                                     icon: "phone.fill",
-                                    isNumeric: true          // angka saja
+                                    isNumeric: true
                                 )
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.25)),
+                                    removal: .opacity
+                                ))
                             }
                             .padding(.horizontal, 20)
                             
@@ -75,6 +97,8 @@ struct GiverSettingsView: View {
                         }
                         .padding(.top, 20)
                         .padding(.bottom, 32)
+                        .opacity(showContent ? 1 : 0)
+                        .offset(y: showContent ? 0 : 20)
                     }
                 }
             }
@@ -82,11 +106,15 @@ struct GiverSettingsView: View {
         .alert("Logout", isPresented: $showingLogoutAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Logout", role: .destructive) {
-                // 1. clear session
-                authVM.logout()        // di sini kamu handle ke StartView di root
+                authVM.logout()
             }
         } message: {
             Text("Are you sure you want to logout?")
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.5)) {
+                showContent = true
+            }
         }
     }
 }
@@ -94,14 +122,11 @@ struct GiverSettingsView: View {
 extension GiverSettingsView {
     private var header: some View {
         HStack {
-
-            // ❗ Back button hanya muncul saat EDIT MODE
             if isEditMode {
                 Button {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         isEditMode = false
                     }
-                    // Delay reload to allow animation to complete
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         viewModel.reloadData()
                     }
@@ -110,8 +135,12 @@ extension GiverSettingsView {
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(Color(hex: "#8B5CF6"))
                 }
+                .buttonStyle(ScaleButtonStyle())
+                .transition(.asymmetric(
+                    insertion: .scale.combined(with: .opacity),
+                    removal: .scale.combined(with: .opacity)
+                ))
             } else {
-                // Agar title tetap center → buat placeholder transparan
                 Color.clear
                     .frame(width: 24, height: 24)
             }
@@ -135,9 +164,14 @@ extension GiverSettingsView {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(Color(hex: "#8B5CF6"))
                 }
+                .buttonStyle(ScaleButtonStyle())
+                .transition(.asymmetric(
+                    insertion: .scale.combined(with: .opacity),
+                    removal: .scale.combined(with: .opacity)
+                ))
             } else {
                 Button {
-                    withAnimation {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         isEditMode = true
                     }
                 } label: {
@@ -145,16 +179,17 @@ extension GiverSettingsView {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(Color(hex: "#8B5CF6"))
                 }
+                .buttonStyle(ScaleButtonStyle())
+                .transition(.asymmetric(
+                    insertion: .scale.combined(with: .opacity),
+                    removal: .scale.combined(with: .opacity)
+                ))
             }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .background(Color(hex: "#F5F5F5"))
     }
-
-
-
-
     
     private var profileImageSection: some View {
         VStack(spacing: 12) {
@@ -167,6 +202,8 @@ extension GiverSettingsView {
                             .font(.system(size: 40))
                             .foregroundColor(Color(hex: "#8B5CF6"))
                     )
+                    .scaleEffect(isEditMode ? 1.05 : 1.0)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isEditMode)
                 
                 if isEditMode {
                     Button {
@@ -182,6 +219,8 @@ extension GiverSettingsView {
                             )
                             .shadow(color: Color.black.opacity(0.2), radius: 4, y: 2)
                     }
+                    .buttonStyle(PulseButtonStyle())
+                    .transition(.scale.combined(with: .opacity))
                 }
             }
         }
@@ -204,6 +243,8 @@ extension GiverSettingsView {
                     .font(.system(size: 18))
                     .foregroundColor(Color(hex: "#8B5CF6"))
                     .frame(width: 24)
+                    .scaleEffect(isEditMode ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isEditMode)
                 
                 if isEditMode {
                     if isSecure {
@@ -219,12 +260,15 @@ extension GiverSettingsView {
                             .foregroundColor(.black)
                             
                             Button {
-                                isPasswordVisible.toggle()
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                    isPasswordVisible.toggle()
+                                }
                             } label: {
                                 Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
                                     .font(.system(size: 16))
                                     .foregroundColor(Color(hex: "#8B5CF6"))
                             }
+                            .buttonStyle(ScaleButtonStyle())
                         }
                     } else {
                         TextField("Enter \(title.lowercased())", text: text)
@@ -260,6 +304,9 @@ extension GiverSettingsView {
                     .stroke(isEditMode ? Color(hex: "#8B5CF6").opacity(0.3) : Color.clear,
                             lineWidth: 1.5)
             )
+            .shadow(color: isEditMode ? Color(hex: "#8B5CF6").opacity(0.1) : Color.clear, radius: 8, y: 4)
+            .scaleEffect(isEditMode ? 1.0 : 0.98)
+            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isEditMode)
         }
     }
     
@@ -274,6 +321,8 @@ extension GiverSettingsView {
                     .font(.system(size: 18))
                     .foregroundColor(Color(hex: "#8B5CF6"))
                     .frame(width: 24)
+                    .scaleEffect(isEditMode ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isEditMode)
                 
                 if isEditMode {
                     Picker("", selection: $viewModel.gender) {
@@ -283,11 +332,7 @@ extension GiverSettingsView {
                     }
                     .pickerStyle(.menu)
                     .tint(Color(hex: "#333333"))
-                    .frame(maxWidth: .infinity, alignment: .leading)   // ⭐ FIX SIZE
-
-
-
-
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     Text(viewModel.gender.isEmpty ? "-" : viewModel.gender)
                         .font(.system(size: 16))
@@ -303,6 +348,9 @@ extension GiverSettingsView {
                     .stroke(isEditMode ? Color(hex: "#8B5CF6").opacity(0.3) : Color.clear,
                             lineWidth: 1.5)
             )
+            .shadow(color: isEditMode ? Color(hex: "#8B5CF6").opacity(0.1) : Color.clear, radius: 8, y: 4)
+            .scaleEffect(isEditMode ? 1.0 : 0.98)
+            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isEditMode)
         }
     }
     
@@ -322,15 +370,23 @@ extension GiverSettingsView {
             .background(Color(hex: "#EF4444"))
             .cornerRadius(12)
         }
+        .buttonStyle(ScaleButtonStyle())
         .padding(.horizontal, 20)
         .padding(.top, 16)
     }
 }
 
-#Preview {
-    GiverSettingsView(userId: "dummy-id")
-        .environmentObject(AuthViewModel())   // supaya logout tidak crash
+
+
+struct PulseButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
+            .animation(.spring(response: 0.2, dampingFraction: 0.5), value: configuration.isPressed)
+    }
 }
 
-
-
+#Preview {
+    GiverSettingsView(userId: "dummy-id")
+        .environmentObject(AuthViewModel())
+}
