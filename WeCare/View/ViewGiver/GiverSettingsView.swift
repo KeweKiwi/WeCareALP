@@ -1,5 +1,6 @@
 import SwiftUI
 
+
 struct GiverSettingsView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authVM: AuthViewModel
@@ -11,6 +12,7 @@ struct GiverSettingsView: View {
     @State private var isEditMode = false
     @State private var isPasswordVisible = false
     @State private var showContent = false
+    @State private var pulsingCamera = false
     
     let genderOptions = ["Male", "Female"]
     
@@ -36,8 +38,8 @@ struct GiverSettingsView: View {
                             
                             if let error = viewModel.errorMessage {
                                 Text(error)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.red)
+                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                    .foregroundColor(Brand.red)
                                     .padding(.horizontal, 20)
                                     .transition(.scale.combined(with: .opacity))
                             }
@@ -119,12 +121,13 @@ struct GiverSettingsView: View {
     }
 }
 
+
 extension GiverSettingsView {
     private var header: some View {
         HStack {
             if isEditMode {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         isEditMode = false
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -133,7 +136,7 @@ extension GiverSettingsView {
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(Color(hex: "#8B5CF6"))
+                        .foregroundColor(Brand.sky)
                 }
                 .buttonStyle(ScaleButtonStyle())
                 .transition(.asymmetric(
@@ -144,25 +147,25 @@ extension GiverSettingsView {
                 Color.clear
                     .frame(width: 24, height: 24)
             }
-
+            
             Spacer()
-
+            
             Text("Settings")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.black)
-
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+            
             Spacer()
-
+            
             if isEditMode {
                 Button {
                     viewModel.saveChanges()
-                    withAnimation {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         isEditMode = false
                     }
                 } label: {
                     Text("Save")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color(hex: "#8B5CF6"))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundColor(Brand.sky)
                 }
                 .buttonStyle(ScaleButtonStyle())
                 .transition(.asymmetric(
@@ -176,8 +179,8 @@ extension GiverSettingsView {
                     }
                 } label: {
                     Text("Edit")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color(hex: "#8B5CF6"))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundColor(Brand.sky)
                 }
                 .buttonStyle(ScaleButtonStyle())
                 .transition(.asymmetric(
@@ -194,30 +197,53 @@ extension GiverSettingsView {
     private var profileImageSection: some View {
         VStack(spacing: 12) {
             ZStack(alignment: .bottomTrailing) {
-                Circle()
-                    .fill(Color(hex: "#8B5CF6").opacity(0.15))
-                    .frame(width: 100, height: 100)
-                    .overlay(
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 40))
-                            .foregroundColor(Color(hex: "#8B5CF6"))
-                    )
-                    .scaleEffect(isEditMode ? 1.05 : 1.0)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isEditMode)
+                ZStack {
+                    // Animated outer glow ring
+                    Circle()
+                        .fill(Brand.sky.opacity(0.2))
+                        .frame(width: 108, height: 108)
+                        .scaleEffect(pulsingCamera ? 1.1 : 1.0)
+                        .opacity(pulsingCamera ? 0 : 1)
+                    
+                    // Main avatar circle
+                    Circle()
+                        .fill(Brand.sky)
+                        .frame(width: 100, height: 100)
+                        .shadow(color: Brand.sky.opacity(0.3), radius: 10, y: 5)
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 45, weight: .semibold))
+                                .foregroundColor(.white)
+                        )
+                        .scaleEffect(isEditMode ? 1.05 : 1.0)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isEditMode)
+                }
+                .onAppear {
+                    withAnimation(.easeOut(duration: 2.0).repeatForever(autoreverses: false)) {
+                        pulsingCamera = true
+                    }
+                }
                 
                 if isEditMode {
                     Button {
                         showingImagePicker = true
                     } label: {
-                        Circle()
-                            .fill(Color(hex: "#8B5CF6"))
-                            .frame(width: 32, height: 32)
-                            .overlay(
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white)
-                            )
-                            .shadow(color: Color.black.opacity(0.2), radius: 4, y: 2)
+                        ZStack {
+                            Circle()
+                                .fill(Brand.sky)
+                                .frame(width: 36, height: 36)
+                            
+                            Circle()
+                                .fill(Brand.sky.opacity(0.3))
+                                .frame(width: 36, height: 36)
+                                .scaleEffect(pulsingCamera ? 1.4 : 1.0)
+                                .opacity(pulsingCamera ? 0 : 1)
+                            
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                        .shadow(color: Brand.sky.opacity(0.4), radius: 8, y: 4)
                     }
                     .buttonStyle(PulseButtonStyle())
                     .transition(.scale.combined(with: .opacity))
@@ -235,16 +261,21 @@ extension GiverSettingsView {
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(Color(hex: "#666666"))
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(.secondary)
             
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundColor(Color(hex: "#8B5CF6"))
-                    .frame(width: 24)
-                    .scaleEffect(isEditMode ? 1.1 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isEditMode)
+                ZStack {
+                    Circle()
+                        .fill(Brand.sky.opacity(0.12))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Brand.sky)
+                }
+                .scaleEffect(isEditMode ? 1.1 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isEditMode)
                 
                 if isEditMode {
                     if isSecure {
@@ -256,8 +287,8 @@ extension GiverSettingsView {
                                     SecureField("Enter \(title.lowercased())", text: text)
                                 }
                             }
-                            .font(.system(size: 16))
-                            .foregroundColor(.black)
+                            .font(.system(size: 16, design: .rounded))
+                            .foregroundColor(.primary)
                             
                             Button {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
@@ -266,14 +297,14 @@ extension GiverSettingsView {
                             } label: {
                                 Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
                                     .font(.system(size: 16))
-                                    .foregroundColor(Color(hex: "#8B5CF6"))
+                                    .foregroundColor(Brand.sky)
                             }
                             .buttonStyle(ScaleButtonStyle())
                         }
                     } else {
                         TextField("Enter \(title.lowercased())", text: text)
-                            .font(.system(size: 16))
-                            .foregroundColor(.black)
+                            .font(.system(size: 16, design: .rounded))
+                            .foregroundColor(.primary)
                             .keyboardType(isNumeric ? .numberPad : .default)
                             .onChange(of: text.wrappedValue) { newValue in
                                 guard isNumeric else { return }
@@ -286,25 +317,26 @@ extension GiverSettingsView {
                 } else {
                     if isSecure {
                         Text("••••••••")
-                            .font(.system(size: 16))
-                            .foregroundColor(Color(hex: "#333333"))
+                            .font(.system(size: 16, design: .rounded))
+                            .foregroundColor(.primary)
                     } else {
                         Text(text.wrappedValue.isEmpty ? "-" : text.wrappedValue)
-                            .font(.system(size: 16))
-                            .foregroundColor(Color(hex: "#333333"))
+                            .font(.system(size: 16, design: .rounded))
+                            .foregroundColor(.primary)
                     }
                     Spacer()
                 }
             }
             .padding(16)
-            .background(Color.white)
-            .cornerRadius(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.white)
+                    .shadow(color: Color.black.opacity(isEditMode ? 0.06 : 0.04), radius: 6, y: 3)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isEditMode ? Color(hex: "#8B5CF6").opacity(0.3) : Color.clear,
-                            lineWidth: 1.5)
+                    .stroke(isEditMode ? Brand.sky.opacity(0.3) : Brand.sky.opacity(0.15), lineWidth: 1.5)
             )
-            .shadow(color: isEditMode ? Color(hex: "#8B5CF6").opacity(0.1) : Color.clear, radius: 8, y: 4)
             .scaleEffect(isEditMode ? 1.0 : 0.98)
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isEditMode)
         }
@@ -313,16 +345,21 @@ extension GiverSettingsView {
     private var genderPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Gender")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(Color(hex: "#666666"))
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(.secondary)
             
             HStack(spacing: 12) {
-                Image(systemName: "person.2.fill")
-                    .font(.system(size: 18))
-                    .foregroundColor(Color(hex: "#8B5CF6"))
-                    .frame(width: 24)
-                    .scaleEffect(isEditMode ? 1.1 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isEditMode)
+                ZStack {
+                    Circle()
+                        .fill(Brand.sky.opacity(0.12))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Brand.sky)
+                }
+                .scaleEffect(isEditMode ? 1.1 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isEditMode)
                 
                 if isEditMode {
                     Picker("", selection: $viewModel.gender) {
@@ -331,24 +368,25 @@ extension GiverSettingsView {
                         }
                     }
                     .pickerStyle(.menu)
-                    .tint(Color(hex: "#333333"))
+                    .tint(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     Text(viewModel.gender.isEmpty ? "-" : viewModel.gender)
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "#333333"))
+                        .font(.system(size: 16, design: .rounded))
+                        .foregroundColor(.primary)
                     Spacer()
                 }
             }
             .padding(16)
-            .background(Color.white)
-            .cornerRadius(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.white)
+                    .shadow(color: Color.black.opacity(isEditMode ? 0.06 : 0.04), radius: 6, y: 3)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isEditMode ? Color(hex: "#8B5CF6").opacity(0.3) : Color.clear,
-                            lineWidth: 1.5)
+                    .stroke(isEditMode ? Brand.sky.opacity(0.3) : Brand.sky.opacity(0.15), lineWidth: 1.5)
             )
-            .shadow(color: isEditMode ? Color(hex: "#8B5CF6").opacity(0.1) : Color.clear, radius: 8, y: 4)
             .scaleEffect(isEditMode ? 1.0 : 0.98)
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isEditMode)
         }
@@ -362,13 +400,16 @@ extension GiverSettingsView {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
                     .font(.system(size: 18, weight: .semibold))
                 Text("Logout")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color(hex: "#EF4444"))
-            .cornerRadius(12)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Brand.red)
+                    .shadow(color: Brand.red.opacity(0.3), radius: 8, y: 4)
+            )
         }
         .buttonStyle(ScaleButtonStyle())
         .padding(.horizontal, 20)
@@ -377,16 +418,19 @@ extension GiverSettingsView {
 }
 
 
-
 struct PulseButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.5), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
+
 
 #Preview {
     GiverSettingsView(userId: "dummy-id")
         .environmentObject(AuthViewModel())
 }
+
+
+
