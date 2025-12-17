@@ -1,33 +1,35 @@
 import SwiftUI
 
 struct ReceiverSettingsView: View {
-    
+
     @ObservedObject var viewModel: ReceiverVM
+    let receiverId: Int
+
     @State private var goToStart = false
     @State private var showLogoutPopup = false
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 30) {
-                
+
                 Spacer().frame(height: 20)
-                
+
                 Image(systemName: "person.circle.fill")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 140, height: 140)
                     .foregroundColor(Color(hex: "#91bef8"))
                     .shadow(color: Color.black.opacity(0.1), radius: 5)
-                
+
                 Text(viewModel.currentUserName)
                     .font(.largeTitle.bold())
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
-                
+
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Vision & Mission")
                         .font(.title2.bold())
-                    
+
                     Text("""
 This application is designed to support elderly individuals living independently by providing remote monitoring, care reminders, and continuous family support even when loved ones cannot always be physically present. Through this system, family members can stay connected and ensure the well-being, daily activities, and safety of their parents at all times.
 """)
@@ -39,17 +41,15 @@ This application is designed to support elderly individuals living independently
                 .cornerRadius(18)
                 .shadow(color: Color.black.opacity(0.06), radius: 5, y: 3)
                 .padding(.horizontal)
-                
+
                 Spacer()
-                
+
                 NavigationLink(
                     destination: StartView().navigationBarBackButtonHidden(true),
                     isActive: $goToStart
                 ) { EmptyView() }
-                
-                Button(action: {
-                    showLogoutPopup = true
-                }) {
+
+                Button(action: { showLogoutPopup = true }) {
                     HStack {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
                             .font(.title3)
@@ -68,8 +68,6 @@ This application is designed to support elderly individuals living independently
         }
         .navigationBarTitle("Settings", displayMode: .inline)
         .background(Color(.systemGray6).ignoresSafeArea())
-        
-        // POPUP
         .overlay(
             Group {
                 if showLogoutPopup {
@@ -92,9 +90,7 @@ This application is designed to support elderly individuals living independently
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
 
-                        Button(action: {
-                            showLogoutPopup = false
-                        }) {
+                        Button(action: { showLogoutPopup = false }) {
                             Text("Cancel")
                                 .font(.headline)
                                 .foregroundColor(.white)
@@ -128,14 +124,9 @@ This application is designed to support elderly individuals living independently
             }
         )
         .onAppear {
-            viewModel.fetchUserProfile(userId: 2)
+            viewModel.fetchUserProfile(userId: receiverId)   // ✅ bukan 2 lagi
         }
     }
 }
 
 
-#Preview {
-    NavigationView {
-        ReceiverSettingsView(viewModel: ReceiverVM())
-    }
-}

@@ -3,8 +3,11 @@ import SwiftUI
 struct ReceiverDashboardView: View {
     @ObservedObject var viewModel: ReceiverVM
     
+
+    let receiverId: Int
+
     private let stepGoal = 6000
-    private let currentUserId = 2
+
     
     var body: some View {
         NavigationView {
@@ -32,7 +35,7 @@ struct ReceiverDashboardView: View {
                         
                         Spacer()
                         
-                        NavigationLink(destination: ReceiverSettingsView(viewModel: viewModel)) {
+                        NavigationLink(destination: ReceiverSettingsView(viewModel: viewModel, receiverId: receiverId)) {
                                 Image(systemName: "gearshape.fill")
                                     .font(.title)
                                     .foregroundColor(Color(hex: "#91bef8"))
@@ -94,12 +97,9 @@ struct ReceiverDashboardView: View {
 //                viewModel.fetchLatestSteps(forUserId: currentUserId)
 //            }
             .onAppear {
-             viewModel.fetchUserProfile(userId: currentUserId)
-            viewModel.debugFetchAllTasksAndPrint(forReceiverId: currentUserId)
-            viewModel.debugFetchTodayTasksAndPrint(forReceiverId: currentUserId)
-
-            viewModel.fetchTodayTasks(forReceiverId: currentUserId)
-            viewModel.fetchLatestSteps(forUserId: currentUserId)
+                viewModel.fetchUserProfile(userId: receiverId)
+                viewModel.fetchTodayTasks(forReceiverId: receiverId)
+                viewModel.fetchLatestSteps(forUserId: receiverId)
 
             }
 
@@ -236,9 +236,9 @@ struct ReminderItem: View {
     }
 }
 
-#Preview {
-    ReceiverDashboardView(viewModel: ReceiverVM())
-}
+//#Preview {
+//    ReceiverDashboardView(viewModel: ReceiverVM())
+//}
 
 // versi non database
 //import SwiftUI
