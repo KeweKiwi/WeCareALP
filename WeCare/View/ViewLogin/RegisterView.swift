@@ -11,7 +11,13 @@ struct RegisterView: View {
                     VStack(spacing: 8) {
                         Text("I am a")
                             .font(.system(size: 28, weight: .bold))
-                            .foregroundStyle(.black)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Brand.red, Brand.vlight.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
                         Text("Select one that applies to you")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -79,6 +85,7 @@ struct BigTile: View {
         .shadow(color: .black.opacity(0.08), radius: 12, y: 8)
     }
 }
+
 // =====================================================
 // MARK: - FAMILY CODE VIEW (6-digit; ke pilih biodata)
 // =====================================================
@@ -88,20 +95,25 @@ struct FamilyCodeView: View {
     @State private var errorMessage: String? = nil
     @State private var goToSelect: Bool = false
     
-    // 1. Initialize ViewModel
     @StateObject private var vm = FamiliesViewModel()
-    
-    // 2. State for loading indicator
     @State private var isVerifying: Bool = false
     
     var body: some View {
         ZStack {
-            
+            // Soft gradient background
+            LinearGradient(
+                colors: [
+                    Color(hex: "#fff5f8"),
+                    Color(hex: "#f0f4ff"),
+                    Color.white
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 20) {
-                    
-                    // Nav ke pilih biodata
+                VStack(spacing: 24) {
                     NavigationLink(
                         destination: CareReceiverSelectView(familyCode: familyCode),
                         isActive: $goToSelect
@@ -110,16 +122,44 @@ struct FamilyCodeView: View {
                     }
                     .hidden()
                     
-                    Text("Please enter Family Code")
-                        .font(.title2.bold())
+                    Spacer()
+                        .frame(height: 20)
                     
-                    Text("Use the 6 digit family code given by your caretaker.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
+                    // Header Icon
+                    Image(systemName: "key.fill")
+                        .font(.system(size: 50))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Brand.green, Brand.green.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: Brand.green.opacity(0.2), radius: 15, y: 8)
                     
+                    VStack(spacing: 8) {
+                        Text("Family Code")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Brand.green, Brand.green.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                        
+                        Text("Use the 6 digit family code given by your caretaker")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                    }
+                    .padding(.bottom, 8)
+                    
+                    // OTP Boxes
                     OTPBoxes(code: familyCode, slots: 6)
                         .onTapGesture { isFocused = true }
+                        .padding(.vertical, 8)
                     
                     // Paste & Help Buttons
                     HStack(spacing: 12) {
@@ -131,14 +171,20 @@ struct FamilyCodeView: View {
                             #endif
                             errorMessage = nil
                         } label: {
-                            Label("Paste", systemImage: "doc.on.clipboard")
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .background(.white, in: Capsule())
-                                .overlay(
-                                    Capsule().stroke(.black.opacity(0.08), lineWidth: 1)
-                                )
+                            HStack(spacing: 6) {
+                                Image(systemName: "doc.on.clipboard.fill")
+                                    .font(.system(size: 13))
+                                Text("Paste")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundColor(Brand.green)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(
+                                Capsule()
+                                    .fill(Color.white)
+                                    .shadow(color: .black.opacity(0.06), radius: 8, y: 2)
+                            )
                         }
                         .buttonStyle(.plain)
                         
@@ -147,15 +193,19 @@ struct FamilyCodeView: View {
                         Button {
                             errorMessage = "Ask your caretaker. The family code is generated after they log in and set up your family."
                         } label: {
-                            Text("Where to get the code?")
-                                .font(.footnote)
-                                .underline()
-                                .foregroundStyle(.secondary)
+                            HStack(spacing: 4) {
+                                Image(systemName: "questionmark.circle.fill")
+                                    .font(.system(size: 12))
+                                Text("Need help?")
+                                    .font(.system(size: 13))
+                            }
+                            .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 4)
                     
-                    // Hidden TextField for input handling
+                    // Hidden TextField
                     TextField("", text: Binding(
                         get: { familyCode },
                         set: { newValue in
@@ -171,15 +221,20 @@ struct FamilyCodeView: View {
                     .accessibilityHidden(true)
                     .onAppear { isFocused = true }
                     
-                    // Error Message Display
+                    // Error Message
                     if let msg = errorMessage {
-                        Text(msg)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.caption)
+                            Text(msg)
+                                .font(.system(size: 13))
+                        }
+                        .foregroundColor(Brand.red)
+                        .padding(.horizontal, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
-                    // 3. Updated Continue Button
+                    // Continue Button
                     Button {
                         if familyCode.count < 6 {
                             errorMessage = "Code must be 6 digits"
@@ -187,55 +242,75 @@ struct FamilyCodeView: View {
                             verifyCode()
                         }
                     } label: {
-                        HStack {
+                        HStack(spacing: 10) {
                             if isVerifying {
                                 ProgressView()
-                                    .tint(.white)
-                                    .padding(.trailing, 8)
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.9)
                             }
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
                             Text(isVerifying ? "Verifying..." : "Continue")
+                                .font(.system(size: 17, weight: .semibold))
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background((familyCode.count == 6 && !isVerifying) ? Color.black : Color.gray.opacity(0.3))
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    (familyCode.count == 6 && !isVerifying)
+                                    ? LinearGradient(
+                                        colors: [Brand.green, Brand.green.opacity(0.85)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                    : LinearGradient(
+                                        colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.25)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .shadow(
+                                    color: (familyCode.count == 6 && !isVerifying) ? Brand.green.opacity(0.3) : .clear,
+                                    radius: 15,
+                                    y: 8
+                                )
+                        )
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
+                    .buttonStyle(.plain)
                     .disabled(familyCode.count != 6 || isVerifying)
+                    .padding(.top, 8)
                     
                     // Information Box
-                    VStack(spacing: 14) {
+                    VStack(spacing: 0) {
                         HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: "info.circle.fill")
-                                .font(.title3)
-                                .foregroundStyle(.white)
+                            Image(systemName: "lightbulb.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(Brand.yellow)
                             
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Don’t see the code?")
-                                    .font(.subheadline.bold())
+                                Text("Don't see the code?")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.primary)
                                 Text("Ask your caretaker to open WeCare and share the 6-digit family code with you.")
-                                    .font(.footnote)
+                                    .font(.system(size: 13))
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
                         }
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(.white)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(.black.opacity(0.06), lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.04), radius: 6, y: 4)
+                        .padding(16)
                     }
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color.white)
+                            .shadow(color: .black.opacity(0.05), radius: 10, y: 4)
+                    )
                     .padding(.top, 8)
                     
-                    Spacer().frame(height: 16)
+                    Spacer().frame(height: 20)
                 }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
             }
         }
     }
